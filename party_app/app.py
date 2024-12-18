@@ -48,11 +48,17 @@ def authorized():
 
         credentials = flow.credentials
         request_session = cachecontrol.CacheControl(google.auth.transport.requests.Request())
+
+        # Додайте перевірку
+        print(f"Fetched token: {credentials._id_token}")
+        
         id_info = id_token.verify_oauth2_token(
             id_token=credentials._id_token,
             request=request_session,
             audience=GOOGLE_CLIENT_ID
         )
+
+        print("ID Token Info:", id_info)
 
         session["google_id"] = id_info.get("sub")
         session["name"] = id_info.get("name")
@@ -61,6 +67,7 @@ def authorized():
     except Exception as e:
         print(f"Error during Google Login: {e}")
         return redirect("/unauthorized")
+
 
 @app.route("/logout")
 def logout():

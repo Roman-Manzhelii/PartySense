@@ -1,5 +1,5 @@
 from sensors.pir import PIRSensor
-from sensors.led_ring import LEDRing
+from sensors.led import LEDRing
 import time
 
 if __name__ == "__main__":

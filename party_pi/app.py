@@ -1,5 +1,4 @@
 import asyncio
-import time
 from sensors.pir import PIRSensor, monitor_pir
 from sensors.led import LEDRing
 from sensors.speaker import Speaker

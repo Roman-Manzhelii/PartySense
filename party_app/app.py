@@ -93,15 +93,6 @@ def authorized():
         print(f"Error during Google Login: {e}")
         return redirect("/unauthorized")
 
-@app.route("/user_prefs")
-def user_prefs():
-    if "google_id" not in session:
-        return redirect("/unauthorized")
-    user_doc = users_collection.find_one({"google_id": session["google_id"]}, {"_id": 0})
-    if not user_doc:
-        return jsonify({"error": "User not found"}), 404
-    return jsonify(user_doc.get("preferences", {}))
-
 @app.route("/settings", methods=["GET", "POST"])
 def settings():
     if "google_id" not in session:

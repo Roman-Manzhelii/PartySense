@@ -122,3 +122,30 @@ html, body {
     display: flex;
     justify-content: flex-end;
 }
+
+.nav-bar {
+    background-color: #433c48;
+    padding: 10px;
+}
+
+.nav-list {
+    list-style: none;
+    display: flex;
+    gap: 15px;
+    margin: 0;
+    padding: 0;
+}
+
+.nav-item {
+    display: inline-block;
+}
+
+.nav-link {
+    color: #f33535;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.nav-link:hover {
+    text-decoration: underline;
+}

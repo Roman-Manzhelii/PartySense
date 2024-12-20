@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Settings</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body class="bg-dark text-light font-base">
+    <header class="header">
+        <h1 class="heading-primary">Settings</h1>
+    </header>
+
+    <main class="main-content">
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <ul class="messages-list">
+            {% for category, message in messages %}
+              <li class="message-item {{ 'msg-error' if category == 'error' else 'msg-success' }}">
+                {{ message }}
+              </li>
+            {% endfor %}
+            </ul>
+          {% endif %}
+        {% endwith %}
+
+        <form method="POST" class="form-settings">
+            <div class="form-group">
+                <label for="volume" class="form-label">Volume (0% - 100%):</label>
+                <input type="range" id="volume" name="volume" min="0" max="100" step="1" value="{{ volume|float * 100 }}" class="form-control-range">
+            </div>
+
+            <div class="form-group">
+                <label for="led_mode" class="form-label">LED Mode:</label>
+                <select id="led_mode" name="led_mode" class="form-control-select">
+                    {% for mode in allowed_modes %}
+                      <option value="{{ mode }}" {% if mode == led_mode %}selected{% endif %}>{{ mode }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group form-actions">
+                <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+        </form>
+
+        <p class="back-link"><a href="/" class="link">Go back to Home</a></p>
+    </main>
+
+</body>
+</html>

@@ -2,7 +2,7 @@ import requests
 from google.oauth2 import id_token
 from google_auth_oauthlib.flow import Flow
 import google.auth.transport.requests
-from flask import Flask, jsonify, redirect, session, url_for, abort, render_template, request
+from flask import Flask, jsonify, redirect, session, url_for, abort, render_template, request, flash
 import os
 from dotenv import load_dotenv
 from pymongo import MongoClient
@@ -23,6 +23,8 @@ users_collection = db["users"]
 SCOPES = ["https://www.googleapis.com/auth/userinfo.profile", 
           "https://www.googleapis.com/auth/userinfo.email", 
           "openid"]
+
+ALLOWED_LED_MODES = ["default", "party", "chill"]
 
 @app.route("/")
 def index():
@@ -99,6 +101,63 @@ def user_prefs():
     if not user_doc:
         return jsonify({"error": "User not found"}), 404
     return jsonify(user_doc.get("preferences", {}))
+
+@app.route("/settings", methods=["GET", "POST"])
+def settings():
+    if "google_id" not in session:
+        return redirect("/unauthorized")
+
+    # Fetch current user prefs
+    user_doc = users_collection.find_one({"google_id": session["google_id"]})
+    if not user_doc:
+        return redirect("/unauthorized")
+
+    current_prefs = user_doc.get("preferences", {})
+    current_volume = current_prefs.get("volume", 0.5)
+    current_led_mode = current_prefs.get("led_mode", "default")
+
+    if request.method == "POST":
+        volume_str = request.form.get("volume", "").strip()
+        led_mode = request.form.get("led_mode", "").strip()
+
+        error_msg = None
+        # Validate volume as integer 0-100, then convert to float
+        try:
+            volume_percent = int(volume_str)
+            if volume_percent < 0 or volume_percent > 100:
+                error_msg = "Volume must be between 0% and 100%."
+            else:
+                # Convert to 0.0-1.0 float
+                volume = volume_percent / 100.0
+        except ValueError:
+            error_msg = "Volume must be a number between 0 and 100."
+
+        # Validate led_mode
+        if not error_msg:
+            if led_mode not in ALLOWED_LED_MODES:
+                error_msg = "Invalid LED mode selected."
+
+        if error_msg:
+            flash(error_msg, "error")
+            return render_template("settings.html", 
+                                volume=current_volume,  # this is stored as 0.0-1.0
+                                led_mode=current_led_mode,
+                                allowed_modes=ALLOWED_LED_MODES)
+        else:
+            # Update DB
+            users_collection.update_one(
+                {"google_id": session["google_id"]},
+                {"$set": {"preferences.volume": volume,
+                        "preferences.led_mode": led_mode}}
+            )
+            flash("Settings updated successfully!", "success")
+            current_volume = volume
+            current_led_mode = led_mode
+
+    return render_template("settings.html", 
+                           volume=current_volume,
+                           led_mode=current_led_mode,
+                           allowed_modes=ALLOWED_LED_MODES)
 
 @app.route("/logout")
 def logout():

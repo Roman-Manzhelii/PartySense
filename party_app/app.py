@@ -2,10 +2,11 @@ import requests
 from google.oauth2 import id_token
 from google_auth_oauthlib.flow import Flow
 import google.auth.transport.requests
-from flask import Flask, jsonify, redirect, session, url_for, abort, render_template, request, flash
+from flask import Flask, jsonify, redirect, session, url_for, render_template, request, flash
 import os
 from dotenv import load_dotenv
 from pymongo import MongoClient
+from publisher import PubNubPublisher
 
 load_dotenv()
 
@@ -20,17 +21,21 @@ mongo_client = MongoClient(MONGODB_URI)
 db = mongo_client["party_sense_db"]
 users_collection = db["users"]
 
-SCOPES = ["https://www.googleapis.com/auth/userinfo.profile", 
-          "https://www.googleapis.com/auth/userinfo.email", 
+pubnub_publisher = PubNubPublisher(channel="settings_channel")
+
+SCOPES = ["https://www.googleapis.com/auth/userinfo.profile",
+          "https://www.googleapis.com/auth/userinfo.email",
           "openid"]
 
 ALLOWED_LED_MODES = ["default", "party", "chill"]
+
 
 @app.route("/")
 def index():
     if "google_id" not in session:
         return redirect("/login")
     return render_template("index.html", user=session.get("name"))
+
 
 @app.route("/login")
 def login():
@@ -42,6 +47,7 @@ def login():
     authorization_url, state = flow.authorization_url(prompt='consent')
     session["state"] = state
     return redirect(authorization_url)
+
 
 @app.route("/login/authorized")
 def authorized():
@@ -75,7 +81,6 @@ def authorized():
         session["name"] = id_info.get("name")
         session["email"] = id_info.get("email")
 
-        # Check if user exists in DB, else create with default preferences
         user_doc = users_collection.find_one({"google_id": session["google_id"]})
         if not user_doc:
             users_collection.insert_one({
@@ -93,12 +98,12 @@ def authorized():
         print(f"Error during Google Login: {e}")
         return redirect("/unauthorized")
 
+
 @app.route("/settings", methods=["GET", "POST"])
 def settings():
     if "google_id" not in session:
         return redirect("/unauthorized")
 
-    # Fetch current user prefs
     user_doc = users_collection.find_one({"google_id": session["google_id"]})
     if not user_doc:
         return redirect("/unauthorized")
@@ -112,52 +117,60 @@ def settings():
         led_mode = request.form.get("led_mode", "").strip()
 
         error_msg = None
-        # Validate volume as integer 0-100, then convert to float
         try:
             volume_percent = int(volume_str)
             if volume_percent < 0 or volume_percent > 100:
                 error_msg = "Volume must be between 0% and 100%."
             else:
-                # Convert to 0.0-1.0 float
                 volume = volume_percent / 100.0
         except ValueError:
             error_msg = "Volume must be a number between 0 and 100."
 
-        # Validate led_mode
         if not error_msg:
             if led_mode not in ALLOWED_LED_MODES:
                 error_msg = "Invalid LED mode selected."
 
         if error_msg:
             flash(error_msg, "error")
-            return render_template("settings.html", 
-                                volume=current_volume,  # this is stored as 0.0-1.0
-                                led_mode=current_led_mode,
-                                allowed_modes=ALLOWED_LED_MODES)
+            return render_template("settings.html",
+                                   volume=current_volume,
+                                   led_mode=current_led_mode,
+                                   allowed_modes=ALLOWED_LED_MODES)
         else:
-            # Update DB
             users_collection.update_one(
                 {"google_id": session["google_id"]},
-                {"$set": {"preferences.volume": volume,
-                        "preferences.led_mode": led_mode}}
+                {"$set": {
+                    "preferences.volume": volume,
+                    "preferences.led_mode": led_mode
+                }}
             )
+
+            pubnub_publisher.publish({
+                "volume": volume,
+                "led_mode": led_mode,
+                "user": session["name"]
+            })
+
             flash("Settings updated successfully!", "success")
             current_volume = volume
             current_led_mode = led_mode
 
-    return render_template("settings.html", 
+    return render_template("settings.html",
                            volume=current_volume,
                            led_mode=current_led_mode,
                            allowed_modes=ALLOWED_LED_MODES)
+
 
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect("/")
 
+
 @app.route("/unauthorized")
 def unauthorized():
     return jsonify({"error": "Unauthorized access"}), 401
+
 
 if __name__ == "__main__":
     app.run(host="localhost", port=5000, debug=True)

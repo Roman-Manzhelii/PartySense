@@ -20,18 +20,19 @@ class SettingsListener(SubscribeCallback):
             print(f"[SettingsListener] LED mode set to {led_mode}")
 
 class PubNubSubscriber:
-    def __init__(self, channel: str, listener: SubscribeCallback):
+    def __init__(self, channel: str, token: str):
         self._channel = channel
         self._pubnub = PubNub(get_pubnub_config())
-        self._listener = listener
+        self._pubnub.config.token = token
 
     def start_listening(self):
-        """Subscribe to the given channel and add the provided listener."""
         print(f"[PubNubSubscriber] Subscribing to channel: {self._channel}")
         self._pubnub.add_listener(self._listener)
         self._pubnub.subscribe().channels(self._channel).execute()
 
+    def set_listener(self, listener: SubscribeCallback):
+        self._listener = listener
+
     def stop_listening(self):
-        """Unsubscribe from the channel."""
         print(f"[PubNubSubscriber] Unsubscribing from channel: {self._channel}")
         self._pubnub.unsubscribe().channels(self._channel).execute()

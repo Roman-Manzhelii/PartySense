@@ -30,13 +30,25 @@ def play_youtube_music(video_id):
     return True
 
 def control_music(action):
-    """
-    Mock function to control music playback.
-    Replace this with actual logic to control playback on the Raspberry Pi.
-    """
     if action not in ["pause", "resume", "next", "previous"]:
         print(f"Error: Unsupported action '{action}'")
         return False
 
     print(f"Music control action: {action}")
     return True
+
+def fetch_video_title(video_id):
+    url = f"{BASE_URL}/videos"
+    params = {
+        "part": "snippet",
+        "id": video_id,
+        "key": YOUTUBE_API_KEY,
+    }
+    response = requests.get(url, params=params)
+    if response.status_code == 200:
+        data = response.json()
+        items = data.get("items", [])
+        if items:
+            return items[0]["snippet"]["title"]
+    print(f"Error fetching video title: {response.status_code} - {response.text}")
+    return None

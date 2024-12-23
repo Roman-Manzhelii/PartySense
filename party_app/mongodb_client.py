@@ -1,5 +1,5 @@
 from pymongo import MongoClient
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 
 # MongoDB setup
@@ -30,7 +30,7 @@ def log_playback_history(google_id, video_id, title):
         "google_id": google_id,
         "video_id": video_id,
         "title": title,
-        "played_at": datetime.now(datetime.timezone.utc)
+        "played_at": datetime.now(timezone.utc)
     })
 
 def update_user_token(google_id, new_token):

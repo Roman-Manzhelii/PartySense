@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 import os
 from dotenv import load_dotenv
 from pubnub_app.pubnub_client import PubNubClient
-from youtube_api import search_youtube_music, play_youtube_music, control_music
+from youtube_api import search_youtube_music, play_youtube_music, control_music, fetch_video_title
 from mongodb_client import (
     get_user_by_google_id,
     save_preferences,
@@ -53,17 +53,18 @@ def dashboard():
         action = request.form.get("action")
 
         if action == "update_preferences":
-            # Update preferences
             volume = float(request.form.get("volume", 50)) / 100  # Convert from percentage
             led_mode = request.form.get("led_mode", "default")
             save_preferences(google_id, volume, led_mode)
             pubnub_client.publish_message(user_doc["channel_name"], {"volume": volume, "led_mode": led_mode})
 
         elif action == "play_music":
-            # Play a selected video
             video_id = request.form.get("video_id")
-            video_title = request.form.get("video_title", "Unknown Title")
             if video_id:
+                # Fetch video details
+                video_title = fetch_video_title(video_id)
+                if not video_title:
+                    video_title = "Unknown Title"
                 play_youtube_music(video_id)
                 log_playback_history(google_id, video_id, video_title)
                 pubnub_client.publish_message(user_doc["channel_name"], {"action": "play", "video_id": video_id})

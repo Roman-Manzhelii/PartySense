@@ -149,3 +149,44 @@ html, body {
 .nav-link:hover {
     text-decoration: underline;
 }
+
+.autocomplete-list {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    border: 1px solid #ccc;
+    position: absolute;
+    z-index: 1000;
+    width: calc(100% - 2px);
+}
+
+.autocomplete-list li {
+    padding: 8px;
+    cursor: pointer;
+}
+
+.autocomplete-list li:hover {
+    background-color: #f0f0f0;
+}
+
+/* Autocomplete list styling */
+#autocomplete-suggestions {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    border: 1px solid #ccc;
+    background: white;
+    position: absolute;
+    width: calc(100% - 2px);
+    z-index: 10;
+}
+
+.suggestion-item {
+    padding: 8px;
+    cursor: pointer;
+}
+
+.suggestion-item:hover {
+    background-color: #f0f0f0;
+}

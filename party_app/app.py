@@ -115,6 +115,17 @@ def search_music():
     results = search_youtube_music(query)
     return jsonify(results)
 
+@app.route("/autocomplete", methods=["GET"])
+def autocomplete():
+    query = request.args.get("query", "")
+    if not query:
+        return jsonify([])
+
+    results = search_youtube_music(query, max_results=5)
+    suggestions = [{"title": item["snippet"]["title"], "video_id": item["id"]["videoId"]} for item in results.get("items", [])]
+    return jsonify(suggestions)
+
+
 @app.route("/login")
 def login():
     flow = Flow.from_client_secrets_file(

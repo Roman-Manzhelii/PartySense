@@ -1,12 +1,20 @@
-from flask import Flask, jsonify, redirect, session, render_template, request, flash
+from flask import Flask, jsonify, session, render_template, request, redirect
 from google.oauth2 import id_token
 from google_auth_oauthlib.flow import Flow
 import google.auth.transport.requests
+from datetime import datetime, timezone
 import os
 from dotenv import load_dotenv
-from pymongo import MongoClient
 from pubnub_app.pubnub_client import PubNubClient
-from youtube_api import search_youtube_music, get_user_playlists, play_youtube_music
+from youtube_api import search_youtube_music, play_youtube_music, control_music
+from mongodb_client import (
+    get_user_by_google_id,
+    save_preferences,
+    get_preferences,
+    log_playback_history,
+    save_user,
+    update_user_token,
+)
 
 # Load environment variables
 load_dotenv()
@@ -17,12 +25,6 @@ app.secret_key = os.getenv("SECRET_FLASK_KEY", "DEFAULT_SECRET_KEY")
 
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"  # Enable HTTP for testing
 client_secrets_file = os.path.join(os.path.dirname(__file__), "google_auth_secrets.json")
-
-# MongoDB setup
-MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017/party_sense_db")
-mongo_client = MongoClient(MONGODB_URI)
-db = mongo_client["party_sense_db"]
-users_collection = db["users"]
 
 # PubNub setup
 pubnub_client = PubNubClient()
@@ -36,11 +38,81 @@ SCOPES = [
 
 ALLOWED_LED_MODES = ["default", "party", "chill"]
 
-@app.route("/")
-def index():
+@app.route("/", methods=["GET", "POST"])
+def dashboard():
     if "google_id" not in session:
         return redirect("/login")
-    return render_template("index.html", user=session.get("name"))
+
+    google_id = session["google_id"]
+    user_doc = get_user_by_google_id(google_id)
+
+    if not user_doc:
+        return redirect("/unauthorized")
+
+    if request.method == "POST":
+        action = request.form.get("action")
+
+        if action == "update_preferences":
+            # Update preferences
+            volume = float(request.form.get("volume", 50)) / 100  # Convert from percentage
+            led_mode = request.form.get("led_mode", "default")
+            save_preferences(google_id, volume, led_mode)
+            pubnub_client.publish_message(user_doc["channel_name"], {"volume": volume, "led_mode": led_mode})
+
+        elif action == "play_music":
+            # Play a selected video
+            video_id = request.form.get("video_id")
+            video_title = request.form.get("video_title", "Unknown Title")
+            if video_id:
+                play_youtube_music(video_id)
+                log_playback_history(google_id, video_id, video_title)
+                pubnub_client.publish_message(user_doc["channel_name"], {"action": "play", "video_id": video_id})
+
+    preferences = get_preferences(google_id) or {"volume": 0.5, "led_mode": "default"}
+    return render_template(
+        "dashboard.html",
+        user=session.get("name"),
+        preferences=preferences,
+        allowed_modes=ALLOWED_LED_MODES,
+    )
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/login")
+
+@app.route("/control_music", methods=["POST"])
+def control_music_route():
+    if "google_id" not in session:
+        return redirect("/unauthorized")
+
+    google_id = session["google_id"]
+    user_doc = get_user_by_google_id(google_id)
+
+    if not user_doc:
+        return redirect("/unauthorized")
+
+    action = request.json.get("action")
+    if not action or action not in ["pause", "resume", "next", "previous"]:
+        return jsonify({"error": "Invalid action"}), 400
+
+    if control_music(action):
+        pubnub_client.publish_message(user_doc["channel_name"], {"action": action})
+        return jsonify({"success": True})
+    else:
+        return jsonify({"error": "Failed to control music"}), 500
+
+@app.route("/search", methods=["GET"])
+def search_music():
+    if "google_id" not in session:
+        return redirect("/unauthorized")
+
+    query = request.args.get("query", "")
+    if not query:
+        return jsonify({"error": "No query provided"}), 400
+
+    results = search_youtube_music(query)
+    return jsonify(results)
 
 @app.route("/login")
 def login():
@@ -83,119 +155,30 @@ def authorized():
         session["email"] = id_info.get("email")
 
         google_id = session["google_id"]
-        user_doc = users_collection.find_one({"google_id": google_id})
+        user_doc = get_user_by_google_id(google_id)
 
         if not user_doc:
             channel_name = f"settings_channel_{google_id}"
             token = pubnub_client.generate_token([channel_name])
-            users_collection.insert_one({
+            user_doc = {
                 "google_id": google_id,
                 "name": session["name"],
                 "email": session["email"],
-                "preferences": {"volume": 0.5, "led_mode": "default"},
                 "channel_name": channel_name,
                 "channel_token": token,
-            })
+                "created_at": datetime.now(timezone.utc),
+            }
+            save_user(user_doc)
         else:
-            channel_name = user_doc.get("channel_name")
-            if not channel_name:
-                channel_name = f"settings_channel_{google_id}"
-                users_collection.update_one({"google_id": google_id}, {"$set": {"channel_name": channel_name}})
-            if pubnub_client.is_token_expired(user_doc.get("channel_token")):
+            channel_name = user_doc["channel_name"]
+            if pubnub_client.is_token_expired(user_doc["channel_token"]):
                 new_token = pubnub_client.generate_token([channel_name])
-                users_collection.update_one({"google_id": google_id}, {"$set": {"channel_token": new_token}})
+                update_user_token(google_id, new_token)
 
         return redirect("/")
     except Exception as e:
         print(f"Error during Google Login: {e}")
         return redirect("/unauthorized")
-
-@app.route("/search", methods=["GET"])
-def search_music():
-    if "google_id" not in session:
-        return redirect("/unauthorized")
-
-    query = request.args.get("query", "")
-    if not query:
-        return jsonify({"error": "No query provided"}), 400
-
-    results = search_youtube_music(query)
-    return jsonify(results)
-
-@app.route("/playlists", methods=["GET"])
-def playlists():
-    if "google_id" not in session:
-        return redirect("/unauthorized")
-
-    playlists = get_user_playlists()
-    return jsonify(playlists)
-
-@app.route("/play", methods=["POST"])
-def play_music():
-    if "google_id" not in session:
-        return redirect("/unauthorized")
-
-    video_id = request.json.get("video_id")
-    if not video_id:
-        return jsonify({"error": "No video ID provided"}), 400
-
-    success = play_youtube_music(video_id)
-    return jsonify({"success": success})
-
-@app.route("/settings", methods=["GET", "POST"])
-def settings():
-    if "google_id" not in session:
-        return redirect("/unauthorized")
-
-    google_id = session["google_id"]
-    user_doc = users_collection.find_one({"google_id": google_id})
-    if not user_doc:
-        return redirect("/unauthorized")
-
-    current_prefs = user_doc.get("preferences", {})
-    current_volume = current_prefs.get("volume", 0.5)
-    current_led_mode = current_prefs.get("led_mode", "default")
-
-    if request.method == "POST":
-        volume = request.form.get("volume", "").strip()
-        led_mode = request.form.get("led_mode", "").strip()
-
-        error_msg = None
-        try:
-            volume_percent = int(volume)
-            if volume_percent < 0 or volume_percent > 100:
-                error_msg = "Volume must be between 0% and 100%."
-            else:
-                volume = volume_percent / 100.0
-        except ValueError:
-            error_msg = "Volume must be a number between 0 and 100."
-
-        if led_mode not in ALLOWED_LED_MODES:
-            error_msg = "Invalid LED mode selected."
-
-        if error_msg:
-            flash(error_msg, "error")
-        else:
-            users_collection.update_one(
-                {"google_id": google_id},
-                {"$set": {
-                    "preferences.volume": volume,
-                    "preferences.led_mode": led_mode,
-                }}
-            )
-            channel_name = user_doc.get("channel_name")
-            pubnub_client.publish_message(channel_name, {"volume": volume, "led_mode": led_mode})
-
-            flash("Settings updated successfully!", "success")
-            current_volume = volume
-            current_led_mode = led_mode
-
-    return render_template("settings.html", volume=current_volume, led_mode=current_led_mode, allowed_modes=ALLOWED_LED_MODES)
-
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect("/")
 
 @app.route("/unauthorized")
 def unauthorized():

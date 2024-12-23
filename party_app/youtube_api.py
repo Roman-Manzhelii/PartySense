@@ -4,7 +4,6 @@ import requests
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 BASE_URL = "https://www.googleapis.com/youtube/v3"
 
-
 def search_youtube_music(query, max_results=10):
     url = f"{BASE_URL}/search"
     params = {
@@ -22,32 +21,22 @@ def search_youtube_music(query, max_results=10):
         print(f"Error: {response.status_code} - {response.text}")
         return None
 
-
-def get_user_playlists():
-    url = f"{BASE_URL}/playlists"
-    params = {
-        "part": "snippet,contentDetails",
-        "mine": True,
-        "key": YOUTUBE_API_KEY,
-    }
-    response = requests.get(url, params=params)
-    if response.status_code == 200:
-        return response.json()
-    else:
-        print(f"Error: {response.status_code} - {response.text}")
-        return None
-
-
 def play_youtube_music(video_id):
-    """
-    Mock function to simulate playing YouTube Music.
-    Replace this with actual playback logic if required.
-    """
     if not video_id:
         print("Error: No video ID provided.")
         return False
 
-    # Simulate sending a request to a playback service or device
     print(f"Playing YouTube Music video with ID: {video_id}")
-    # Example logic: Return True as a success mock
+    return True
+
+def control_music(action):
+    """
+    Mock function to control music playback.
+    Replace this with actual logic to control playback on the Raspberry Pi.
+    """
+    if action not in ["pause", "resume", "next", "previous"]:
+        print(f"Error: Unsupported action '{action}'")
+        return False
+
+    print(f"Music control action: {action}")
     return True

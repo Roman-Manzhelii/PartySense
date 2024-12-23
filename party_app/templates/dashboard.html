@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PartySense</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <header>
+        <h1>Welcome, {{ user }}!</h1>
+        <a href="/logout" class="logout-button">Logout</a>
+    </header>
+
+    <!-- Search Music -->
+    <section>
+        <h2>Search Music</h2>
+        <div>
+            <label for="search">Search:</label>
+            <input type="text" id="search" placeholder="Enter song or artist">
+            <button onclick="searchMusic()">Search</button>
+        </div>
+
+        <div id="search-results">
+            <h3>Search Results:</h3>
+            <ul id="results-list"></ul>
+        </div>
+    </section>
+
+    <!-- Playback Controls -->
+    <section>
+        <h2>Playback Controls</h2>
+        <form method="POST" id="playback-form">
+            <input type="hidden" name="action" value="play_music">
+            <label for="video_id">Video ID:</label>
+            <input type="text" id="video_id" name="video_id" placeholder="Enter Video ID">
+            <button type="submit">Play</button>
+        </form>
+
+        <div class="playback-buttons">
+            <button onclick="controlMusic('pause')">Pause</button>
+            <button onclick="controlMusic('resume')">Resume</button>
+            <button onclick="controlMusic('next')">Next</button>
+            <button onclick="controlMusic('previous')">Previous</button>
+        </div>
+    </section>
+
+    <!-- Preferences -->
+    <section>
+        <h2>Preferences</h2>
+        <form method="POST">
+            <input type="hidden" name="action" value="update_preferences">
+            <div>
+                <label for="volume">Volume (0-100):</label>
+                <input type="range" id="volume" name="volume" min="0" max="100" step="1" value="{{ preferences.volume * 100 }}">
+                <span id="volume-display">{{ preferences.volume * 100 }}%</span>
+            </div>
+            <div>
+                <label for="led_mode">LED Mode:</label>
+                <select id="led_mode" name="led_mode">
+                    {% for mode in allowed_modes %}
+                        <option value="{{ mode }}" {% if preferences.led_mode == mode %}selected{% endif %}>{{ mode }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit">Update Preferences</button>
+        </form>
+    </section>
+
+    <script>
+        // Update the volume display dynamically
+        const volumeSlider = document.getElementById('volume');
+        const volumeDisplay = document.getElementById('volume-display');
+
+        // Set initial volume display on page load
+        volumeDisplay.textContent = `${Math.round(volumeSlider.value)}%`;
+
+        // Update volume display as the slider is adjusted
+        volumeSlider.addEventListener('input', () => {
+            volumeDisplay.textContent = `${Math.round(volumeSlider.value)}%`;
+        });
+
+        function searchMusic() {
+            const query = document.getElementById('search').value;
+            fetch(`/search?query=${query}`)
+                .then(response => response.json())
+                .then(data => {
+                    const resultsList = document.getElementById('results-list');
+                    resultsList.innerHTML = '';
+                    data.items.forEach(item => {
+                        const li = document.createElement('li');
+                        li.textContent = `${item.snippet.title} (ID: ${item.id.videoId})`;
+                        resultsList.appendChild(li);
+                    });
+                });
+        }
+
+        function controlMusic(action) {
+            fetch(`/control_music`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action })
+            })
+            .then(response => response.json())
+            .then(data => console.log(data));
+        }
+    </script>
+</body>
+</html>

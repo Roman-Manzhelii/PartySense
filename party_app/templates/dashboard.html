@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PartySense</title>
     <link rel="stylesheet" href="/static/css/styles.css">
 </head>
@@ -9,15 +10,15 @@
     <h1>Welcome, {{ user }}!</h1>
 
     <!-- Search Music -->
-    <div>
+    <div id="search-container">
         <label for="search">Search:</label>
-        <input type="text" id="search" placeholder="Enter song or artist">
+        <input type="text" id="search" placeholder="Enter song or artist" autocomplete="off">
         <button onclick="searchMusic()">Search</button>
     </div>
 
     <div id="search-results">
-        <h3>Search Results:</h3>
-        <ul id="results-list"></ul>
+        <div id="results-grid" class="results-grid"></div>
+        <div id="loading" style="display: none;">Loading...</div>
     </div>
 
     <!-- Playback Controls -->

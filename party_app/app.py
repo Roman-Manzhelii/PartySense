@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 import os
 from dotenv import load_dotenv
 from pubnub_app.pubnub_client import PubNubClient
-from youtube_api import search_youtube_music, play_youtube_music, control_music, fetch_video_title
+from youtube_api import search_youtube_music, play_youtube_music, control_music, fetch_video_title, autocomplete_music
 from mongodb_client import (
     get_user_by_google_id,
     save_preferences,
@@ -61,10 +61,7 @@ def dashboard():
         elif action == "play_music":
             video_id = request.form.get("video_id")
             if video_id:
-                # Fetch video details
-                video_title = fetch_video_title(video_id)
-                if not video_title:
-                    video_title = "Unknown Title"
+                video_title = fetch_video_title(video_id) or "Unknown Title"
                 play_youtube_music(video_id)
                 log_playback_history(google_id, video_id, video_title)
                 pubnub_client.publish_message(user_doc["channel_name"], {"action": "play", "video_id": video_id})
@@ -109,11 +106,23 @@ def search_music():
         return redirect("/unauthorized")
 
     query = request.args.get("query", "")
+    page_token = request.args.get("pageToken", "")
     if not query:
         return jsonify({"error": "No query provided"}), 400
 
-    results = search_youtube_music(query)
-    return jsonify(results)
+    # Додаткове логування для відлагодження
+    print(f"Search query: '{query}', Page token: '{page_token}'")
+
+    try:
+        results = search_youtube_music(query, page_token=page_token)
+        if results:
+            print(f"Next Page Token: {results.get('nextPageToken')}")
+            return jsonify(results)
+        else:
+            return jsonify({"error": "Failed to fetch results"}), 500
+    except Exception as e:
+        print(f"Error during search: {e}")
+        return jsonify({"error": "Internal server error"}), 500
 
 @app.route("/autocomplete", methods=["GET"])
 def autocomplete():
@@ -121,10 +130,8 @@ def autocomplete():
     if not query:
         return jsonify([])
 
-    results = search_youtube_music(query, max_results=5)
-    suggestions = [{"title": item["snippet"]["title"], "video_id": item["id"]["videoId"]} for item in results.get("items", [])]
+    suggestions = autocomplete_music(query)
     return jsonify(suggestions)
-
 
 @app.route("/login")
 def login():

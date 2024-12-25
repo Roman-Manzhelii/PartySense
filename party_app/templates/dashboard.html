@@ -1,3 +1,4 @@
+<!-- templates/dashboard.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,6 +9,38 @@
 </head>
 <body>
     <h1>Welcome, {{ user }}!</h1>
+
+    <!-- Playback Controls -->
+    <form method="POST" id="playback-form">
+        <input type="hidden" name="action" value="play_music">
+        <label for="video_id">Video ID:</label>
+        <input type="text" id="video_id" name="video_id" required>
+        <button type="submit">Play</button>
+    </form>
+
+    <button onclick="controlMusic('pause')">Pause</button>
+    <button onclick="controlMusic('resume')">Resume</button>
+    <button onclick="controlMusic('next')">Next</button>
+    <button onclick="controlMusic('previous')">Previous</button>
+
+    <!-- Preferences -->
+    <form method="POST">
+        <input type="hidden" name="action" value="update_preferences">
+        <label for="volume">Volume (0-100):</label>
+        <input type="range" id="volume" name="volume" min="0" max="100" step="1" value="{{ preferences.volume * 100 }}" oninput="document.getElementById('volume-display').textContent = this.value + '%'">
+        <span id="volume-display">{{ preferences.volume * 100 }}%</span>
+        
+        <label for="led_mode">LED Mode:</label>
+        <select id="led_mode" name="led_mode">
+            {% for mode in allowed_modes %}
+                <option value="{{ mode }}" {% if preferences.led_mode == mode %}selected{% endif %}>{{ mode }}</option>
+            {% endfor %}
+        </select>
+        
+        <button type="submit">Update Preferences</button>
+    </form>
+
+    <a href="/logout">Logout</a>
 
     <!-- Search Music -->
     <div id="search-container">
@@ -21,37 +54,15 @@
         <div id="loading" style="display: none;">Loading...</div>
     </div>
 
-    <!-- Playback Controls -->
-    <form method="POST" id="playback-form">
-        <input type="hidden" name="action" value="play_music">
-        <label for="video_id">Video ID:</label>
-        <input type="text" id="video_id" name="video_id">
-        <button type="submit">Play</button>
-    </form>
+    <!-- Playback Status -->
+    <div id="playback-status">
+        <h2>Current Playback</h2>
+        <p>Title: <span id="current-song-title">N/A</span></p>
+        <p>State: <span id="playback-state">Stopped</span></p>
+        <p>Position: <span id="playback-position">0 sec</span></p>
+    </div>
 
-    <button onclick="controlMusic('pause')">Pause</button>
-    <button onclick="controlMusic('resume')">Resume</button>
-    <button onclick="controlMusic('next')">Next</button>
-    <button onclick="controlMusic('previous')">Previous</button>
-
-    <!-- Preferences -->
-    <form method="POST">
-        <input type="hidden" name="action" value="update_preferences">
-        <label for="volume">Volume (0-100):</label>
-        <input type="range" id="volume" name="volume" min="0" max="100" step="1" value="{{ preferences.volume * 100 }}">
-        <span id="volume-display">{{ preferences.volume * 100 }}%</span>
-        <label for="led_mode">LED Mode:</label>
-        <select id="led_mode" name="led_mode">
-            {% for mode in allowed_modes %}
-                <option value="{{ mode }}" {% if preferences.led_mode == mode %}selected{% endif %}>{{ mode }}</option>
-            {% endfor %}
-        </select>
-        <button type="submit">Update Preferences</button>
-    </form>
-
-    <a href="/logout">Logout</a>
-
-    <!-- Link to general JavaScript file -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js" crossorigin="anonymous"></script>
     <script src="/static/js/main.js"></script>
 </body>
 </html>

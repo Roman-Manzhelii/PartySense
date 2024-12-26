@@ -1,7 +1,6 @@
 # blueprints/music.py
-from flask import Blueprint, jsonify, request, redirect, session, current_app
+from flask import Blueprint, jsonify, request, current_app
 from services.music_service import MusicService
-from services.user_service import UserService
 from decorators.token_required import token_required
 import logging
 import traceback
@@ -12,11 +11,9 @@ logger = logging.getLogger(__name__)
 
 @music_bp.route("/control_music", methods=["POST"])
 @token_required
-def control_music_route():
+def control_music_route(current_user):
     try:
-        google_id = session["google_id"]
-        user_service: UserService = current_app.user_service
-        user_doc = user_service.get_user_by_google_id(google_id)
+        user_doc = current_user  # current_user вже містить user_doc
 
         action = request.json.get("action")
         if not action or action not in ["pause", "resume", "next", "previous"]:

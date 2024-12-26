@@ -51,7 +51,9 @@ def autocomplete_music(query, max_results=3):
             video_id = item["id"]["videoId"]
             if title not in unique_titles:
                 unique_titles[title] = video_id
-        return [{"title": title, "video_id": vid} for title, vid in unique_titles.items()]
+        suggestions = [{"title": title, "video_id": vid} for title, vid in unique_titles.items()]
+        logger.info(f"Fetched autocomplete suggestions for query '{query}': {suggestions}")
+        return suggestions
     except requests.RequestException as e:
         logger.error(f"Error fetching autocomplete suggestions: {e}")
         return []
@@ -61,6 +63,7 @@ def play_youtube_music(video_id):
         logger.error("No video ID provided for playing music.")
         return False
     # Реалізація відтворення музики
+    logger.info(f"Playing YouTube music with video_id {video_id}.")
     return True
 
 def control_music(action):
@@ -68,6 +71,7 @@ def control_music(action):
         logger.error(f"Unsupported action '{action}' for music control.")
         return False
     # Реалізація контролю музики
+    logger.info(f"Controlling music with action '{action}'.")
     return True
 
 def fetch_video_title(video_id):
@@ -83,7 +87,9 @@ def fetch_video_title(video_id):
         data = response.json()
         items = data.get("items", [])
         if items:
-            return items[0]["snippet"]["title"]
+            title = items[0]["snippet"]["title"]
+            logger.info(f"Fetched video title for {video_id}: {title}")
+            return title
     except requests.RequestException as e:
         logger.error(f"Error fetching video title: {e}")
     return None

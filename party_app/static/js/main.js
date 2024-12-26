@@ -3,6 +3,10 @@ const API = {
     SEARCH: "/search",
     AUTOCOMPLETE: "/autocomplete",
     CONTROL: "/control_music",
+    PLAYLISTS: "/api/playlists",
+    FAVORITES: "/api/favorites",
+    CATEGORIES: "/api/categories",
+    PLAYBACK: "/api/playback"
 };
 
 let nextPageToken = null; // For pagination
@@ -72,7 +76,106 @@ document.addEventListener("DOMContentLoaded", () => {
     socket.on('disconnect', () => {
         console.log('Disconnected from WebSocket server');
     });
+
+    // Handle Playlist Form Submission
+    const createPlaylistForm = document.getElementById("create-playlist-form");
+    if (createPlaylistForm) {
+        createPlaylistForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const name = document.getElementById("playlist_name").value.trim();
+            const description = document.getElementById("playlist_description").value.trim();
+
+            if (!name) {
+                alert("Playlist name is required.");
+                return;
+            }
+
+            try {
+                const response = await fetch(API.PLAYLISTS, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name, description })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    alert("Playlist created successfully.");
+                    // Optionally, refresh the playlist list or append the new playlist
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (error) {
+                console.error("Error creating playlist:", error);
+            }
+        });
+    }
+
+    // Handle Add Favorite Form Submission
+    const addFavoriteForm = document.getElementById("add-favorite-form");
+    if (addFavoriteForm) {
+        addFavoriteForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const video_id = document.getElementById("favorite_video_id").value.trim();
+            const title = document.getElementById("favorite_title").value.trim();
+            const thumbnail_url = document.getElementById("favorite_thumbnail_url").value.trim();
+            const duration = parseInt(document.getElementById("favorite_duration").value.trim());
+
+            if (!video_id || !title || !thumbnail_url || isNaN(duration)) {
+                alert("All fields are required and duration must be a number.");
+                return;
+            }
+
+            try {
+                const response = await fetch(API.FAVORITES, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ video_id, title, thumbnail_url, duration, added_at: new Date().toISOString() })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    alert("Song added to favorites.");
+                    // Optionally, refresh the favorites list or append the new favorite
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (error) {
+                console.error("Error adding favorite:", error);
+            }
+        });
+    }
+
+    // Handle Create Category Form Submission
+    const createCategoryForm = document.getElementById("create-category-form");
+    if (createCategoryForm) {
+        createCategoryForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const name = document.getElementById("category_name").value.trim();
+            const description = document.getElementById("category_description").value.trim();
+
+            if (!name) {
+                alert("Category name is required.");
+                return;
+            }
+
+            try {
+                const response = await fetch(API.CATEGORIES, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name, description })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    alert("Category created successfully.");
+                    // Optionally, refresh the categories list or append the new category
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (error) {
+                console.error("Error creating category:", error);
+            }
+        });
+    }
 });
+
 
 // Function to initiate search
 function initiateSearch(query) {
@@ -250,24 +353,128 @@ function searchMusic() {
 
 // Update UI based on received playback statuses
 function updatePlaybackUI(data) {
-    // Example: Update playback state
-    const playbackInfo = data.current_song;
-    if (playbackInfo) {
-        const { title, state, position } = playbackInfo;
-        // Update song title
-        const songTitleElement = document.getElementById("current-song-title");
-        if (songTitleElement) {
-            songTitleElement.textContent = title;
-        }
-        // Update playback state
-        const playbackStateElement = document.getElementById("playback-state");
-        if (playbackStateElement) {
-            playbackStateElement.textContent = state;
-        }
-        // Update playback position
-        const playbackPositionElement = document.getElementById("playback-position");
-        if (playbackPositionElement) {
-            playbackPositionElement.textContent = `${position} sec`;
-        }
+    if (!data || !data.current_song) return;
+
+    const { title, state, position } = data.current_song;
+    // Update song title
+    const songTitleElement = document.getElementById("current-song-title");
+    if (songTitleElement) {
+        songTitleElement.textContent = title;
     }
+    // Update playback state
+    const playbackStateElement = document.getElementById("playback-state");
+    if (playbackStateElement) {
+        playbackStateElement.textContent = state;
+    }
+    // Update playback position
+    const playbackPositionElement = document.getElementById("playback-position");
+    if (playbackPositionElement) {
+        playbackPositionElement.textContent = `${position} sec`;
+    }
+}
+
+// Handle Playlist Deletion
+async function deletePlaylist(playlist_id) {
+    if (!confirm("Are you sure you want to delete this playlist?")) return;
+
+    try {
+        const response = await fetch(`${API.PLAYLISTS}/${playlist_id}`, {
+            method: "DELETE"
+        });
+        const data = await response.json();
+        if (response.ok) {
+            alert("Playlist deleted successfully.");
+            // Optionally, refresh the playlist list
+        } else {
+            alert(`Error: ${data.error}`);
+        }
+    } catch (error) {
+        console.error("Error deleting playlist:", error);
+    }
+}
+
+// Handle Add Favorite Form Submission
+const addFavoriteForm = document.getElementById("add-favorite-form");
+if (addFavoriteForm) {
+    addFavoriteForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const video_id = document.getElementById("favorite_video_id").value.trim();
+        const title = document.getElementById("favorite_title").value.trim();
+        const thumbnail_url = document.getElementById("favorite_thumbnail_url").value.trim();
+        const duration = parseInt(document.getElementById("favorite_duration").value.trim());
+
+        if (!video_id || !title || !thumbnail_url || isNaN(duration)) {
+            alert("All fields are required and duration must be a number.");
+            return;
+        }
+
+        try {
+            const response = await fetch(API.FAVORITES, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ video_id, title, thumbnail_url, duration, added_at: new Date().toISOString() })
+            });
+            const data = await response.json();
+            if (response.ok) {
+                alert("Song added to favorites.");
+                // Optionally, refresh the favorites list or append the new favorite
+            } else {
+                alert(`Error: ${data.error}`);
+            }
+        } catch (error) {
+            console.error("Error adding favorite:", error);
+        }
+    });
+}
+
+// Handle Remove Favorite
+async function removeFavorite(video_id) {
+    if (!confirm("Are you sure you want to remove this song from favorites?")) return;
+
+    try {
+        const response = await fetch(`${API.FAVORITES}/${video_id}`, {
+            method: "DELETE"
+        });
+        const data = await response.json();
+        if (response.ok) {
+            alert("Song removed from favorites.");
+            // Optionally, refresh the favorites list
+        } else {
+            alert(`Error: ${data.error}`);
+        }
+    } catch (error) {
+        console.error("Error removing favorite:", error);
+    }
+}
+
+// Handle Create Category Form Submission
+const createCategoryForm = document.getElementById("create-category-form");
+if (createCategoryForm) {
+    createCategoryForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const name = document.getElementById("category_name").value.trim();
+        const description = document.getElementById("category_description").value.trim();
+
+        if (!name) {
+            alert("Category name is required.");
+            return;
+        }
+
+        try {
+            const response = await fetch(API.CATEGORIES, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name, description })
+            });
+            const data = await response.json();
+            if (response.ok) {
+                alert("Category created successfully.");
+                // Optionally, refresh the categories list or append the new category
+            } else {
+                alert(`Error: ${data.error}`);
+            }
+        } catch (error) {
+            console.error("Error creating category:", error);
+        }
+    });
 }

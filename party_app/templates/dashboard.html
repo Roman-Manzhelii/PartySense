@@ -37,10 +37,71 @@
             {% endfor %}
         </select>
         
+        <label for="motion_detection">Motion Detection:</label>
+        <input type="checkbox" id="motion_detection" name="motion_detection" {% if preferences.motion_detection %}checked{% endif %}>
+        
         <button type="submit">Update Preferences</button>
     </form>
 
-    <a href="/logout">Logout</a>
+    <!-- Плейлисти -->
+    <h2>Your Playlists</h2>
+    <div id="playlists">
+        <ul>
+            {% for playlist in playlists %}
+                <li>
+                    <strong>{{ playlist.name }}</strong> - {{ playlist.description }}
+                    <button onclick="deletePlaylist('{{ playlist.playlist_id }}')">Delete</button>
+                </li>
+            {% endfor %}
+        </ul>
+        <form id="create-playlist-form">
+            <input type="text" id="playlist_name" placeholder="Playlist Name" required>
+            <input type="text" id="playlist_description" placeholder="Description">
+            <button type="submit">Create Playlist</button>
+        </form>
+    </div>
+
+    <!-- Улюблені пісні -->
+    <h2>Your Favorites</h2>
+    <div id="favorites">
+        <ul>
+            {% for song in favorites %}
+                <li>
+                    <strong>{{ song.title }}</strong>
+                    <button onclick="removeFavorite('{{ song.video_id }}')">Remove</button>
+                </li>
+            {% endfor %}
+        </ul>
+        <form id="add-favorite-form">
+            <input type="text" id="favorite_video_id" placeholder="Video ID" required>
+            <input type="text" id="favorite_title" placeholder="Title" required>
+            <input type="text" id="favorite_thumbnail_url" placeholder="Thumbnail URL" required>
+            <input type="number" id="favorite_duration" placeholder="Duration (sec)" required>
+            <button type="submit">Add to Favorites</button>
+        </form>
+    </div>
+
+    <!-- Категорії -->
+    <h2>Your Categories</h2>
+    <div id="categories">
+        <ul>
+            {% for category in categories %}
+                <li>
+                    <strong>{{ category.name }}</strong> - {{ category.description }}
+                    <ul>
+                        {% for pl_id in category.playlists %}
+                            <li>Playlist ID: {{ pl_id }}</li>
+                        {% endfor %}
+                    </ul>
+                </li>
+            {% endfor %}
+        </ul>
+        <form id="create-category-form">
+            <input type="text" id="category_name" placeholder="Category Name" required>
+            <input type="text" id="category_description" placeholder="Description">
+            <button type="submit">Create Category</button>
+        </form>
+    </div>
 
     <!-- Search Music -->
     <div id="search-container">
@@ -61,6 +122,8 @@
         <p>State: <span id="playback-state">Stopped</span></p>
         <p>Position: <span id="playback-position">0 sec</span></p>
     </div>
+
+    <a href="/logout">Logout</a>
 
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js" crossorigin="anonymous"></script>
     <script src="/static/js/main.js"></script>

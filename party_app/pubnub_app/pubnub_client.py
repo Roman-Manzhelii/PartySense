@@ -1,17 +1,13 @@
 # pubnub_app/pubnub_client.py
-import os
-from dotenv import load_dotenv
+from pubnub_app.pubnub_config import get_pubnub_config
 from pubnub.pubnub import PubNub
 from pubnub.exceptions import PubNubException
 from datetime import datetime, timezone, timedelta
 from pubnub.models.consumer.v3.channel import Channel
-from pubnub_app.pubnub_config import get_pubnub_config
 import logging
 
-load_dotenv()
-
 # Налаштування логування
-logging.basicConfig(level=logging.INFO)  # Рівень логування встановлено на INFO
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class PubNubClient:
@@ -43,7 +39,6 @@ class PubNubClient:
             logger.error(f"Unexpected error during token generation: {e}")
             return None, None
 
-
     def is_token_expired(self, expiration_time):
         now_utc = datetime.now(timezone.utc)
         is_expired = now_utc >= expiration_time
@@ -62,3 +57,22 @@ class PubNubClient:
         except Exception as e:
             logger.error(f"Unexpected error during publish: {e}")
             return False
+
+    def subscribe_to_status_channel(self, user_id, callback):
+        try:
+            channel = f"user_{user_id}_status"
+            self.pubnub.add_listener(StatusListener(callback))
+            self.pubnub.subscribe().channels([channel]).execute()
+            logger.info(f"Subscribed to status channel: {channel}")
+        except Exception as e:
+            logger.error(f"Error subscribing to status channel {channel}: {e}")
+
+class StatusListener:
+    def __init__(self, callback):
+        self.callback = callback
+
+    def status(self, pubnub, status):
+        pass  # Обробка статусних подій PubNub, якщо необхідно
+
+    def message(self, pubnub, message):
+        self.callback(message.message)

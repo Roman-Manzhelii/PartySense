@@ -1,6 +1,6 @@
 # decorators/token_required.py
 from functools import wraps
-from flask import request, jsonify, session, redirect, current_app
+from flask import jsonify, session, redirect, current_app
 from services.user_service import UserService
 import logging
 import traceback
@@ -66,7 +66,8 @@ def token_required(f):
                         logger.error("Failed to update channel_token_status.")
                         return jsonify({'error': 'Failed to update token'}), 500
 
-            return f(*args, **kwargs)
+            # Передача current_user до декорованої функції
+            return f(current_user=user_doc, *args, **kwargs)
         except Exception as e:
             logger.error(f"Error in token_required decorator: {e}")
             logger.error(traceback.format_exc())

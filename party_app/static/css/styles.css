@@ -1,3 +1,4 @@
+/* static/css/styles.css */
 html, body {
     margin: 0;
     padding: 0;
@@ -6,7 +7,7 @@ html, body {
     color: #f66565;
 }
 
-h1 {
+h1, h2 {
     text-align: center;
 }
 
@@ -35,7 +36,7 @@ h1 {
 }
 
 .main-content {
-    max-width: 600px;
+    max-width: 800px;
     margin: 30px auto;
     padding: 20px;
     background-color: #0f0e10;
@@ -117,6 +118,104 @@ h1 {
     justify-content: flex-end;
 }
 
+/* Playlists */
+#playlists ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+#playlists li {
+    margin: 10px 0;
+    padding: 10px;
+    background-color: #433c48;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#playlists li button {
+    background-color: #e70e0e;
+    color: #fff;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#playlists li button:hover {
+    background-color: #c00a0a;
+}
+
+/* Favorites */
+#favorites ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+#favorites li {
+    margin: 10px 0;
+    padding: 10px;
+    background-color: #433c48;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#favorites li button {
+    background-color: #e70e0e;
+    color: #fff;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#favorites li button:hover {
+    background-color: #c00a0a;
+}
+
+/* Categories */
+#categories ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+#categories li {
+    margin: 10px 0;
+    padding: 10px;
+    background-color: #433c48;
+    border-radius: 4px;
+}
+
+#categories ul ul {
+    list-style-type: disc;
+    margin-left: 20px;
+}
+
+#categories form {
+    margin-top: 10px;
+}
+
+#categories form input, #categories form button {
+    padding: 5px;
+    margin-right: 10px;
+}
+
+#categories form button {
+    background-color: #f33535;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#categories form button:hover {
+    background-color: #e70e0e;
+}
+
+/* Autocomplete Suggestions */
 #autocomplete-suggestions {
     position: absolute;
     background-color: #fff;
@@ -145,7 +244,6 @@ h1 {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
-    /* Видалено фіксовану висоту та overflow */
     border: 1px solid #ddd;
     padding: 10px;
 }

@@ -71,7 +71,7 @@ def authorized():
                 "channel_token_status": token_status,
                 "channel_token_status_expiration": expiration_status,
                 "playlists": [],
-                "favorites": [],
+                "favorites": None,  # Ставимо None, створимо при необхідності
                 "preferences": {
                     "volume": 0.5,
                     "led_mode": "default",
@@ -81,6 +81,13 @@ def authorized():
             }
             user_service.save_user(user_doc)
             logger.info(f"New user {google_id} saved.")
+
+            # Створення документу favorites для користувача
+            favorites_id = user_service.create_favorites(str(user_doc["_id"]))
+            # Можливо, додати favorites_id до користувача
+            user_service.update_user_tokens(google_id, {"favorites": favorites_id})
+            logger.info(f"Favorites created for user {google_id} with ID {favorites_id}.")
+
         else:
             # Перевірка та оновлення токенів, якщо вони закінчилися
             tokens_updated = user_service.update_tokens_if_expired(google_id, user_doc)

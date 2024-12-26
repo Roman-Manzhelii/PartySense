@@ -94,24 +94,30 @@ def handle_status_update(message):
 @app.route("/", methods=["GET", "POST"])
 @token_required
 def dashboard(current_user):
+    google_id = current_user["google_id"]
+    user_doc = user_service.get_user_by_google_id(google_id)
+
+    if not user_doc:
+        return redirect("/unauthorized")
+
     if request.method == "POST":
         action = request.form.get("action")
 
         if action == "update_preferences":
-            volume = float(request.form.get("volume", 50)) / 100  # Конвертація з процентів
+            volume = min(max(float(request.form.get("volume", 50)) / 100, 0), 1)
             led_mode = request.form.get("led_mode", "default")
             # Припускаємо, що motion_detection - це чекбокс
-            motion_detection = request.form.get("motion_detection", "on") == "on"
+            motion_detection = 'motion_detection' in request.form
             preferences = {
                 "volume": volume,
                 "led_mode": led_mode,
                 "motion_detection": motion_detection
             }
-            user_service.save_preferences(str(current_user["_id"]), preferences)
-            logger.info(f"Preferences updated for user {current_user['google_id']}.")
+            user_service.save_preferences(google_id, preferences)
+            logger.info(f"Preferences updated for user {google_id}.")
 
             # Публікація оновлення налаштувань через PubNub
-            pubnub_client.publish_message(current_user["channel_name_commands"], {
+            pubnub_client.publish_message(user_doc["channel_name_commands"], {
                 "action": "update_preferences",
                 "preferences": preferences
             })
@@ -121,27 +127,21 @@ def dashboard(current_user):
             if video_id:
                 video_title = music_service.fetch_video_title(video_id) or "Unknown Title"
                 music_service.play_youtube_music(video_id)
-                user_service.log_playback_history(current_user["google_id"], video_id, video_title)
+                user_service.log_playback_history(google_id, video_id, video_title)
                 logger.info(f"Play command sent for video_id {video_id}.")
 
                 # Публікація команди Play через PubNub
-                pubnub_client.publish_message(current_user["channel_name_commands"], {
+                pubnub_client.publish_message(user_doc["channel_name_commands"], {
                     "action": "play",
                     "video_id": video_id,
                     "position": 0  # Початок
                 })
 
-    user_id = str(current_user["_id"])
-    user_doc = user_service.get_user_by_google_id(current_user["google_id"])
-
-    if not user_doc:
-        return redirect("/unauthorized")
-
-    preferences = user_service.get_preferences(user_id) or {
+    preferences = user_service.get_preferences(google_id) or {
         "volume": 0.5, "led_mode": "default", "motion_detection": True
     }
 
-    playlists = user_service.get_playlists(user_id)
+    playlists = user_service.get_playlists(google_id)
     playlists_list = [{
         "playlist_id": str(pl["_id"]),
         "name": pl["name"],
@@ -151,10 +151,10 @@ def dashboard(current_user):
         "updated_at": pl["updated_at"].isoformat()
     } for pl in playlists]
 
-    favorites = user_service.get_favorites(user_id)
+    favorites = user_service.get_favorites(google_id)
     favorites_list = favorites.get("songs", []) if favorites else []
 
-    categories = user_service.get_categories(user_id)
+    categories = user_service.get_categories(google_id)
     categories_list = [{
         "name": cat["name"],
         "description": cat.get("description", ""),

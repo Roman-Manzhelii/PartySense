@@ -87,59 +87,59 @@ class UserService:
         return get_all_users()
 
     # Плейлисти
-    def create_playlist(self, user_id, name, description=""):
-        playlist_id = create_playlist(user_id, name, description)
-        logger.info(f"Created playlist '{name}' with ID {playlist_id} for user {user_id}.")
+    def create_playlist(self, google_id, name, description=""):
+        playlist_id = create_playlist(google_id, name, description)
+        logger.info(f"Created playlist '{name}' with ID {playlist_id} for user {google_id}.")
         return playlist_id
 
     def update_playlist(self, playlist_id, update_data):
         update_playlist(playlist_id, update_data)
         logger.info(f"Updated playlist {playlist_id} with data {update_data}.")
 
-    def get_playlists(self, user_id):
-        return get_playlists(user_id)
+    def get_playlists(self, google_id):
+        return get_playlists(google_id)
 
-    def delete_playlist(self, user_id, playlist_id):
-        success = delete_playlist(user_id, playlist_id)
+    def delete_playlist(self, google_id, playlist_id):
+        success = delete_playlist(google_id, playlist_id)
         if success:
-            logger.info(f"Deleted playlist {playlist_id} for user {user_id}.")
+            logger.info(f"Deleted playlist {playlist_id} for user {google_id}.")
         else:
-            logger.warning(f"Failed to delete playlist {playlist_id} for user {user_id}.")
+            logger.warning(f"Failed to delete playlist {playlist_id} for user {google_id}.")
         return success
 
     # Улюблені пісні
-    def create_favorites(self, user_id):
-        favorites_id = create_favorites(user_id)
-        logger.info(f"Created favorites with ID {favorites_id} for user {user_id}.")
+    def create_favorites(self, google_id):
+        favorites_id = create_favorites(google_id)
+        logger.info(f"Created favorites with ID {favorites_id} for user {google_id}.")
         return favorites_id
 
-    def add_favorite(self, user_id, song):
-        add_favorite(user_id, song)
-        logger.info(f"Added song {song['video_id']} to favorites for user {user_id}.")
+    def add_favorite(self, google_id, song):
+        add_favorite(google_id, song)
+        logger.info(f"Added song {song['video_id']} to favorites for user {google_id}.")
 
-    def remove_favorite(self, user_id, video_id):
-        remove_favorite(user_id, video_id)
-        logger.info(f"Removed song {video_id} from favorites for user {user_id}.")
+    def remove_favorite(self, google_id, video_id):
+        remove_favorite(google_id, video_id)
+        logger.info(f"Removed song {video_id} from favorites for user {google_id}.")
 
-    def get_favorites(self, user_id):
-        return get_favorites(user_id)
+    def get_favorites(self, google_id):
+        return get_favorites(google_id)
 
     # Категорії
-    def create_category(self, user_id, name, description=""):
-        create_category(user_id, name, description)
-        logger.info(f"Created category '{name}' for user {user_id}.")
+    def create_category(self, google_id, name, description=""):
+        create_category(google_id, name, description)
+        logger.info(f"Created category '{name}' for user {google_id}.")
 
-    def add_playlist_to_category(self, user_id, category_name, playlist_id):
-        add_playlist_to_category(user_id, category_name, playlist_id)
-        logger.info(f"Added playlist {playlist_id} to category '{category_name}' for user {user_id}.")
+    def add_playlist_to_category(self, google_id, category_name, playlist_id):
+        add_playlist_to_category(google_id, category_name, playlist_id)
+        logger.info(f"Added playlist {playlist_id} to category '{category_name}' for user {google_id}.")
 
-    def get_categories(self, user_id):
-        return get_categories(user_id)
+    def get_categories(self, google_id):
+        return get_categories(google_id)
 
     # Поточне відтворення
-    def get_current_playback(self, user_id):
-        return get_current_playback(user_id)
+    def get_current_playback(self, google_id):
+        return get_current_playback(google_id)
 
-    def update_current_playback(self, user_id, current_song):
-        update_current_playback(user_id, current_song)
-        logger.info(f"Updated current playback for user {user_id} with song {current_song.get('video_id')}.")
+    def update_current_playback(self, google_id, current_song):
+        update_current_playback(google_id, current_song)
+        logger.info(f"Updated current playback for user {google_id} with song {current_song.get('video_id')}.")

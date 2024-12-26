@@ -27,9 +27,9 @@
     <form method="POST">
         <input type="hidden" name="action" value="update_preferences">
         <label for="volume">Volume (0-100):</label>
-        <input type="range" id="volume" name="volume" min="0" max="100" step="1" value="{{ preferences.volume * 100 }}" oninput="document.getElementById('volume-display').textContent = this.value + '%'">
-        <span id="volume-display">{{ preferences.volume * 100 }}%</span>
-        
+        <input type="range" id="volume" name="volume" min="0" max="100" step="1" value="{{ (preferences.volume * 100) | int }}" oninput="document.getElementById('volume-display').textContent = this.value + '%'">
+        <span id="volume-display">{{ (preferences.volume * 100) | int }}%</span>
+
         <label for="led_mode">LED Mode:</label>
         <select id="led_mode" name="led_mode">
             {% for mode in allowed_modes %}

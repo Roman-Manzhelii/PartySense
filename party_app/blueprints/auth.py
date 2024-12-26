@@ -50,6 +50,9 @@ def authorized():
 
         pubnub_client = current_app.pubnub_client
 
+        now_utc = datetime.now(timezone.utc)
+        logger.debug(f"Current server time (UTC): {now_utc}")
+        
         if not user_doc:
             channel_name_commands = f"user_{google_id}_commands"
             channel_name_status = f"user_{google_id}_status"

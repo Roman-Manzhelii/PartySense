@@ -41,7 +41,17 @@ class PubNubClient:
 
     def is_token_expired(self, expiration_time):
         now_utc = datetime.now(timezone.utc)
+        
+        # Перевірка, чи expiration_time має часовий пояс
+        if expiration_time.tzinfo is None:
+            # Припускаємо, що expiration_time в UTC
+            expiration_time = expiration_time.replace(tzinfo=timezone.utc)
+            logger.debug("Converted expiration_time to offset-aware with UTC timezone.")
+        else:
+            logger.debug("expiration_time is already offset-aware.")
+        
         is_expired = now_utc >= expiration_time
+        logger.debug(f"Comparing now_utc: {now_utc} >= expiration_time: {expiration_time} = {is_expired}")
         return is_expired
 
     def publish_message(self, channel, message):

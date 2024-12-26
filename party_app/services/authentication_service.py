@@ -27,6 +27,7 @@ class AuthenticationService:
                 id_token=token,
                 request=request_session,
                 audience=audience,
+                clock_skew_in_seconds=10
             )
             return id_info
         except Exception as e:

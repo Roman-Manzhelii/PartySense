@@ -176,7 +176,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-
 // Function to initiate search
 function initiateSearch(query) {
     if (!query) {
@@ -393,40 +392,6 @@ async function deletePlaylist(playlist_id) {
     }
 }
 
-// Handle Add Favorite Form Submission
-const addFavoriteForm = document.getElementById("add-favorite-form");
-if (addFavoriteForm) {
-    addFavoriteForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const video_id = document.getElementById("favorite_video_id").value.trim();
-        const title = document.getElementById("favorite_title").value.trim();
-        const thumbnail_url = document.getElementById("favorite_thumbnail_url").value.trim();
-        const duration = parseInt(document.getElementById("favorite_duration").value.trim());
-
-        if (!video_id || !title || !thumbnail_url || isNaN(duration)) {
-            alert("All fields are required and duration must be a number.");
-            return;
-        }
-
-        try {
-            const response = await fetch(API.FAVORITES, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ video_id, title, thumbnail_url, duration, added_at: new Date().toISOString() })
-            });
-            const data = await response.json();
-            if (response.ok) {
-                alert("Song added to favorites.");
-                // Optionally, refresh the favorites list or append the new favorite
-            } else {
-                alert(`Error: ${data.error}`);
-            }
-        } catch (error) {
-            console.error("Error adding favorite:", error);
-        }
-    });
-}
-
 // Handle Remove Favorite
 async function removeFavorite(video_id) {
     if (!confirm("Are you sure you want to remove this song from favorites?")) return;
@@ -445,36 +410,4 @@ async function removeFavorite(video_id) {
     } catch (error) {
         console.error("Error removing favorite:", error);
     }
-}
-
-// Handle Create Category Form Submission
-const createCategoryForm = document.getElementById("create-category-form");
-if (createCategoryForm) {
-    createCategoryForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const name = document.getElementById("category_name").value.trim();
-        const description = document.getElementById("category_description").value.trim();
-
-        if (!name) {
-            alert("Category name is required.");
-            return;
-        }
-
-        try {
-            const response = await fetch(API.CATEGORIES, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name, description })
-            });
-            const data = await response.json();
-            if (response.ok) {
-                alert("Category created successfully.");
-                // Optionally, refresh the categories list or append the new category
-            } else {
-                alert(`Error: ${data.error}`);
-            }
-        } catch (error) {
-            console.error("Error creating category:", error);
-        }
-    });
 }

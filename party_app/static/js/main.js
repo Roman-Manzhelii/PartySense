@@ -1,4 +1,3 @@
-// static/js/main.js
 const API = {
     SEARCH: "/search",
     AUTOCOMPLETE: "/autocomplete",
@@ -9,12 +8,12 @@ const API = {
     PLAYBACK: "/api/playback"
 };
 
-let nextPageToken = null; // For pagination
-let isLoading = false; // Prevent simultaneous API requests
-let currentQuery = ""; // Track current search query
-const loadedVideoIds = new Set(); // To avoid duplication
+let nextPageToken = null; // Потрібно для пагінації
+let isLoading = false;    // Запобігає одночасним запитам
+let currentQuery = "";    // Поточний пошуковий запит
+const loadedVideoIds = new Set(); // Щоб уникнути дублювання результатів
 
-// Debounce function to limit the rate of function calls
+// Debounce дозволяє обмежити частоту викликів функції
 function debounce(func, delay) {
     let timeoutId;
     return function(...args) {
@@ -28,16 +27,28 @@ function debounce(func, delay) {
 document.addEventListener("DOMContentLoaded", () => {
     const searchInput = document.getElementById("search");
 
-    // Create autocomplete suggestions list
+    // Створюємо список автодоповнення
     const suggestionsList = createSuggestionsList(searchInput);
 
-    // Add 'input' event listener with debounce for autocomplete
+    // Обробник автодоповнення з debounce
     const debouncedHandleAutocomplete = debounce(() => {
         handleAutocomplete(searchInput, suggestionsList);
-    }, 300); // 300ms delay
+    }, 300);
     searchInput.addEventListener("input", debouncedHandleAutocomplete);
 
-    // Enter key handler
+    const lottieContainer = document.getElementById('lottie-container');
+    if (lottieContainer) {
+      lottie.loadAnimation({
+        container: lottieContainer,
+        renderer: 'svg',
+        loop: true,
+        autoplay: true,
+        path: '/static/lottie/gradient.json'
+      });
+    }
+
+
+    // Натискання Enter для пошуку
     searchInput.addEventListener("keydown", (e) => {
         if (e.key === "Enter") {
             e.preventDefault();
@@ -45,51 +56,44 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Scroll handler to load more results when near bottom
+    // Довантаження результатів при прокручуванні сторінки
     window.addEventListener("scroll", debounce(() => {
         if (isLoading || !nextPageToken) return;
-
-        // Check if near bottom of page (100px buffer)
         if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 100)) {
             console.log("Fetching more results on scroll");
             fetchResults(currentQuery);
         }
-    }, 200)); // 200ms debounce
+    }, 200));
 
-    // Clear suggestions when clicking outside
+    // Закриття підказок при кліку поза списком
     document.addEventListener("click", (event) => {
         clearSuggestionsOnClick(event, suggestionsList, searchInput);
     });
 
-    // Connect to WebSocket to receive real-time statuses
-    const socket = io(); // Assuming server is set up for Socket.IO
+    // Підключення Socket.IO для оновлень в реальному часі
+    const socket = io();
     socket.on('connect', () => {
         console.log('Connected to WebSocket server');
     });
-
     socket.on('playback_update', (data) => {
         console.log('Received playback update:', data);
-        // Update UI based on received data
         updatePlaybackUI(data);
     });
-
     socket.on('disconnect', () => {
         console.log('Disconnected from WebSocket server');
     });
 
-    // Handle Playlist Form Submission
+    // Форма створення плейлиста (якщо раптом десь відображається)
     const createPlaylistForm = document.getElementById("create-playlist-form");
     if (createPlaylistForm) {
         createPlaylistForm.addEventListener("submit", async (e) => {
             e.preventDefault();
             const name = document.getElementById("playlist_name").value.trim();
             const description = document.getElementById("playlist_description").value.trim();
-
             if (!name) {
                 alert("Playlist name is required.");
                 return;
             }
-
             try {
                 const response = await fetch(API.PLAYLISTS, {
                     method: "POST",
@@ -99,7 +103,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 const data = await response.json();
                 if (response.ok) {
                     alert("Playlist created successfully.");
-                    // Optionally, refresh the playlist list or append the new playlist
                 } else {
                     alert(`Error: ${data.error}`);
                 }
@@ -109,7 +112,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Handle Add Favorite Form Submission
+    // Форма додавання до Favorites
     const addFavoriteForm = document.getElementById("add-favorite-form");
     if (addFavoriteForm) {
         addFavoriteForm.addEventListener("submit", async (e) => {
@@ -128,12 +131,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 const response = await fetch(API.FAVORITES, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ video_id, title, thumbnail_url, duration, added_at: new Date().toISOString() })
+                    body: JSON.stringify({
+                        video_id,
+                        title,
+                        thumbnail_url,
+                        duration,
+                        added_at: new Date().toISOString()
+                    })
                 });
                 const data = await response.json();
                 if (response.ok) {
                     alert("Song added to favorites.");
-                    // Optionally, refresh the favorites list or append the new favorite
                 } else {
                     alert(`Error: ${data.error}`);
                 }
@@ -143,19 +151,17 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Handle Create Category Form Submission
+    // Форма створення категорії (також якщо десь використовується)
     const createCategoryForm = document.getElementById("create-category-form");
     if (createCategoryForm) {
         createCategoryForm.addEventListener("submit", async (e) => {
             e.preventDefault();
             const name = document.getElementById("category_name").value.trim();
             const description = document.getElementById("category_description").value.trim();
-
             if (!name) {
                 alert("Category name is required.");
                 return;
             }
-
             try {
                 const response = await fetch(API.CATEGORIES, {
                     method: "POST",
@@ -165,7 +171,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 const data = await response.json();
                 if (response.ok) {
                     alert("Category created successfully.");
-                    // Optionally, refresh the categories list or append the new category
                 } else {
                     alert(`Error: ${data.error}`);
                 }
@@ -176,22 +181,20 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-// Function to initiate search
+/* ============== Пошук та автодоповнення ============== */
+
 function initiateSearch(query) {
     if (!query) {
         alert("Please enter a search query.");
         return;
     }
-
     const resultsGrid = document.getElementById("results-grid");
     const loadingIndicator = document.getElementById("loading");
-
     if (!resultsGrid || !loadingIndicator) {
         console.error("Required elements not found in DOM.");
         return;
     }
-
-    // Clear previous results and state
+    // Скидаємо попередні результати
     resultsGrid.innerHTML = "";
     nextPageToken = null;
     currentQuery = query;
@@ -199,7 +202,6 @@ function initiateSearch(query) {
     fetchResults(query);
 }
 
-// Create suggestions list element
 function createSuggestionsList(searchInput) {
     const suggestionsList = document.createElement("ul");
     suggestionsList.id = "autocomplete-suggestions";
@@ -207,14 +209,12 @@ function createSuggestionsList(searchInput) {
     return suggestionsList;
 }
 
-// Handle autocomplete logic
 async function handleAutocomplete(searchInput, suggestionsList) {
     const query = searchInput.value.trim();
     if (query.length < 2) {
         suggestionsList.innerHTML = "";
         return;
     }
-
     try {
         const suggestions = await fetchSuggestions(query);
         updateSuggestionsUI(suggestions, searchInput, suggestionsList);
@@ -223,13 +223,11 @@ async function handleAutocomplete(searchInput, suggestionsList) {
     }
 }
 
-// Fetch suggestions from server
 async function fetchSuggestions(query) {
     const response = await fetch(`${API.AUTOCOMPLETE}?query=${encodeURIComponent(query)}`);
     return response.ok ? response.json() : [];
 }
 
-// Update suggestions UI
 function updateSuggestionsUI(suggestions, searchInput, suggestionsList) {
     suggestionsList.innerHTML = "";
     suggestions.forEach(({ title }) => {
@@ -238,39 +236,34 @@ function updateSuggestionsUI(suggestions, searchInput, suggestionsList) {
         li.classList.add("suggestion-item");
         li.addEventListener("click", () => {
             searchInput.value = title;
-            suggestionsList.innerHTML = ""; // Clear suggestions
-            initiateSearch(title); // Start search
+            suggestionsList.innerHTML = "";
+            initiateSearch(title);
         });
         suggestionsList.appendChild(li);
     });
 }
 
-// Clear suggestions when clicking outside
 function clearSuggestionsOnClick(event, suggestionsList, searchInput) {
     if (!suggestionsList.contains(event.target) && event.target !== searchInput) {
         suggestionsList.innerHTML = "";
     }
 }
 
-// Fetch results and handle pagination
+/* ============== Запит на отримання результатів пошуку ============== */
+
 async function fetchResults(query) {
     if (!query || isLoading) return;
-
     isLoading = true;
     updateLoadingIndicator(true);
 
     try {
         console.log(`Fetching results for query: '${query}', pageToken: '${nextPageToken}'`);
-
-        // Construct URL correctly to avoid passing 'null' or empty string
         let url = `${API.SEARCH}?query=${encodeURIComponent(query)}`;
         if (nextPageToken) {
             url += `&pageToken=${encodeURIComponent(nextPageToken)}`;
         }
-
         const response = await fetch(url);
         if (!response.ok) throw new Error("Failed to fetch results");
-
         const data = await response.json();
         console.log("Received data:", data);
         updateResultsUI(data);
@@ -282,19 +275,14 @@ async function fetchResults(query) {
     }
 }
 
-// Update search results in UI
 function updateResultsUI(data) {
     const resultsGrid = document.getElementById("results-grid");
     nextPageToken = data.nextPageToken || null;
-
     console.log(`Updating results UI. Next page token: '${nextPageToken}'`);
 
     data.items.forEach(({ snippet, id }) => {
-        if (loadedVideoIds.has(id.videoId)) {
-            // If video already loaded, skip
-            return;
-        }
-
+        // Уникнення дублювання
+        if (loadedVideoIds.has(id.videoId)) return;
         loadedVideoIds.add(id.videoId);
 
         const card = document.createElement("div");
@@ -310,80 +298,70 @@ function updateResultsUI(data) {
         card.appendChild(img);
         card.appendChild(title);
 
+        // Поки що простий обробник — повторний пошук
         card.addEventListener("click", () => {
             initiateSearch(snippet.title);
         });
 
         resultsGrid.appendChild(card);
     });
-
     console.log(`After update, nextPageToken is: '${nextPageToken}'`);
 }
 
-// Update loading indicator visibility
 function updateLoadingIndicator(show) {
     const loadingIndicator = document.getElementById("loading");
     loadingIndicator.style.display = show ? "block" : "none";
 }
 
-// Control music playback
+/* ============== Контроль музики ============== */
+
 function controlMusic(action) {
     fetch(API.CONTROL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action }),
     })
-        .then((response) => response.json())
-        .then((data) => {
-            if (data.success) {
-                console.log(`Music control response:`, data);
-            } else {
-                console.error(`Error:`, data.error);
-            }
-        })
-        .catch((error) => console.error("Error controlling music:", error));
+    .then((response) => response.json())
+    .then((data) => {
+        if (data.success) {
+            console.log(`Music control response:`, data);
+        } else {
+            console.error(`Error:`, data.error);
+        }
+    })
+    .catch((error) => console.error("Error controlling music:", error));
 }
 
-// Function for Search button to call initiateSearch
 function searchMusic() {
     const query = document.getElementById("search").value.trim();
     initiateSearch(query);
 }
 
-// Update UI based on received playback statuses
+/* ============== Оновлення UI при зміні стану відтворення ============== */
+
 function updatePlaybackUI(data) {
     if (!data || !data.current_song) return;
-
     const { title, state, position } = data.current_song;
-    // Update song title
+
     const songTitleElement = document.getElementById("current-song-title");
-    if (songTitleElement) {
-        songTitleElement.textContent = title;
-    }
-    // Update playback state
+    if (songTitleElement) songTitleElement.textContent = title;
+
     const playbackStateElement = document.getElementById("playback-state");
-    if (playbackStateElement) {
-        playbackStateElement.textContent = state;
-    }
-    // Update playback position
+    if (playbackStateElement) playbackStateElement.textContent = state;
+
     const playbackPositionElement = document.getElementById("playback-position");
-    if (playbackPositionElement) {
-        playbackPositionElement.textContent = `${position} sec`;
-    }
+    if (playbackPositionElement) playbackPositionElement.textContent = `${position} sec`;
 }
 
-// Handle Playlist Deletion
+/* ============== Інші допоміжні функції ============== */
+
 async function deletePlaylist(playlist_id) {
     if (!confirm("Are you sure you want to delete this playlist?")) return;
-
     try {
-        const response = await fetch(`${API.PLAYLISTS}/${playlist_id}`, {
-            method: "DELETE"
-        });
+        const response = await fetch(`${API.PLAYLISTS}/${playlist_id}`, { method: "DELETE" });
         const data = await response.json();
         if (response.ok) {
             alert("Playlist deleted successfully.");
-            // Optionally, refresh the playlist list
         } else {
             alert(`Error: ${data.error}`);
         }
@@ -392,18 +370,13 @@ async function deletePlaylist(playlist_id) {
     }
 }
 
-// Handle Remove Favorite
 async function removeFavorite(video_id) {
     if (!confirm("Are you sure you want to remove this song from favorites?")) return;
-
     try {
-        const response = await fetch(`${API.FAVORITES}/${video_id}`, {
-            method: "DELETE"
-        });
+        const response = await fetch(`${API.FAVORITES}/${video_id}`, { method: "DELETE" });
         const data = await response.json();
         if (response.ok) {
             alert("Song removed from favorites.");
-            // Optionally, refresh the favorites list
         } else {
             alert(`Error: ${data.error}`);
         }

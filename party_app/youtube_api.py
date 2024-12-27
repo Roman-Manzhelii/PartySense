@@ -1,4 +1,3 @@
-# youtube_api.py
 import os
 import requests
 import logging
@@ -35,7 +34,7 @@ def autocomplete_music(query, max_results=3):
         "part": "snippet",
         "q": query,
         "type": "video",
-        "videoCategoryId": "10",  # Category ID for Music
+        "videoCategoryId": "10",
         "key": YOUTUBE_API_KEY,
         "maxResults": max_results,
     }
@@ -51,7 +50,7 @@ def autocomplete_music(query, max_results=3):
             video_id = item["id"]["videoId"]
             if title not in unique_titles:
                 unique_titles[title] = video_id
-        suggestions = [{"title": title, "video_id": vid} for title, vid in unique_titles.items()]
+        suggestions = [{"title": t, "video_id": v} for t, v in unique_titles.items()]
         logger.info(f"Fetched autocomplete suggestions for query '{query}': {suggestions}")
         return suggestions
     except requests.RequestException as e:
@@ -62,7 +61,6 @@ def play_youtube_music(video_id):
     if not video_id:
         logger.error("No video ID provided for playing music.")
         return False
-    # Реалізація відтворення музики
     logger.info(f"Playing YouTube music with video_id {video_id}.")
     return True
 
@@ -70,7 +68,6 @@ def control_music(action):
     if action not in ["pause", "resume", "next", "previous"]:
         logger.error(f"Unsupported action '{action}' for music control.")
         return False
-    # Реалізація контролю музики
     logger.info(f"Controlling music with action '{action}'.")
     return True
 

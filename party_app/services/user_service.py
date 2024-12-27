@@ -1,4 +1,3 @@
-# services/user_service.py
 from mongodb_client import (
     get_user_by_google_id,
     save_user,
@@ -51,7 +50,6 @@ class UserService:
     def update_tokens_if_expired(self, google_id, user_doc):
         tokens_updated = False
 
-        # Перевірка та оновлення токенів для channel_commands
         expiration_commands = user_doc.get("channel_token_commands_expiration")
         if expiration_commands and self.pubnub_client.is_token_expired(expiration_commands):
             new_token_commands, new_expiration_commands = self.pubnub_client.generate_token([user_doc["channel_name_commands"]])
@@ -66,7 +64,6 @@ class UserService:
                 logger.error("Failed to update channel_token_commands.")
                 return False
 
-        # Перевірка та оновлення токенів для channel_status
         expiration_status = user_doc.get("channel_token_status_expiration")
         if expiration_status and self.pubnub_client.is_token_expired(expiration_status):
             new_token_status, new_expiration_status = self.pubnub_client.generate_token([user_doc["channel_name_status"]])

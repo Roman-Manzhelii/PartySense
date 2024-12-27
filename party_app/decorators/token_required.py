@@ -1,4 +1,3 @@
-# decorators/token_required.py
 from functools import wraps
 from flask import jsonify, session, redirect, current_app
 from services.user_service import UserService
@@ -19,19 +18,16 @@ def token_required(f):
             google_id = session["google_id"]
             user_service: UserService = current_app.user_service
             user_doc = user_service.get_user_by_google_id(google_id)
-
             if not user_doc:
                 logger.error(f"User with google_id {google_id} not found.")
                 return redirect("/unauthorized")
 
+            # Перевірка/оновлення токенів PubNub
             pubnub_client = current_app.pubnub_client
 
-            # Перевірка та оновлення токенів для channel_commands
             token_commands = user_doc.get('channel_token_commands')
             expiration_commands = user_doc.get('channel_token_commands_expiration')
-
             if token_commands and expiration_commands:
-                # Переконайтеся, що expiration_commands є timezone-aware
                 if expiration_commands.tzinfo is None:
                     expiration_commands = expiration_commands.replace(tzinfo=timezone.utc)
                 if pubnub_client.is_token_expired(expiration_commands):
@@ -46,12 +42,9 @@ def token_required(f):
                         logger.error("Failed to update channel_token_commands.")
                         return jsonify({'error': 'Failed to update token'}), 500
 
-            # Перевірка та оновлення токенів для channel_status
             token_status = user_doc.get('channel_token_status')
             expiration_status = user_doc.get('channel_token_status_expiration')
-
             if token_status and expiration_status:
-                # Переконайтеся, що expiration_status є timezone-aware
                 if expiration_status.tzinfo is None:
                     expiration_status = expiration_status.replace(tzinfo=timezone.utc)
                 if pubnub_client.is_token_expired(expiration_status):
@@ -66,8 +59,8 @@ def token_required(f):
                         logger.error("Failed to update channel_token_status.")
                         return jsonify({'error': 'Failed to update token'}), 500
 
-            # Передача current_user до декорованої функції
             return f(current_user=user_doc, *args, **kwargs)
+
         except Exception as e:
             logger.error(f"Error in token_required decorator: {e}")
             logger.error(traceback.format_exc())

@@ -1,4 +1,3 @@
-# services/search_service.py
 from youtube_api import search_youtube_music, autocomplete_music
 import logging
 

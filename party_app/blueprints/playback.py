@@ -1,4 +1,3 @@
-# blueprints/playback.py
 from flask import Blueprint, jsonify, request, current_app
 from services.user_service import UserService
 from decorators.token_required import token_required
@@ -10,9 +9,14 @@ from datetime import datetime, timezone
 playback_bp = Blueprint('playback', __name__)
 logger = logging.getLogger(__name__)
 
-# Схеми валідації
 class PlayCommandSchema(Schema):
-    action = fields.String(required=True, validate=lambda x: x in ["play", "pause", "resume", "next", "previous", "seek", "set_mode", "set_motion_detection"])
+    action = fields.String(
+        required=True,
+        validate=lambda x: x in [
+            "play", "pause", "resume", "next", "previous",
+            "seek", "set_mode", "set_motion_detection"
+        ]
+    )
     video_id = fields.String(required=False)
     position = fields.Integer(required=False)
     mode = fields.String(required=False, validate=lambda x: x in ["repeat", "default", "shuffle"])
@@ -33,7 +37,6 @@ def handle_playback(current_user):
     user_id = str(current_user["_id"])
     user_service: UserService = current_app.user_service
     pubnub_client = current_app.pubnub_client
-
     user_doc = user_service.get_user_by_google_id(current_user["google_id"])
 
     try:
@@ -44,12 +47,11 @@ def handle_playback(current_user):
             if not video_id:
                 return jsonify({"error": "video_id is required for play action."}), 400
 
-            # Оновлення поточного відтворення в MongoDB
             current_song = {
                 "video_id": video_id,
-                "title": "Unknown Title",  # Можливо, треба отримати з MusicService
-                "thumbnail_url": "http://example.com/image.jpg",  # Можливо, треба отримати з MusicService
-                "duration": 0,  # Можливо, треба отримати з MusicService
+                "title": "Unknown Title",
+                "thumbnail_url": "http://example.com/image.jpg",
+                "duration": 0,
                 "position": position,
                 "state": "playing",
                 "mode": mode,
@@ -58,7 +60,6 @@ def handle_playback(current_user):
             }
             user_service.update_current_playback(user_id, current_song)
 
-            # Надсилання команди через PubNub
             command = {
                 "action": "play",
                 "video_id": video_id,
@@ -73,7 +74,6 @@ def handle_playback(current_user):
                 return jsonify({"error": "Failed to send play command."}), 500
 
         elif action in ["pause", "resume", "next", "previous"]:
-            # Оновлення поточного відтворення в MongoDB
             state = "paused" if action == "pause" else "playing"
             current_song = user_service.get_current_playback(user_id)
             if current_song:
@@ -94,7 +94,6 @@ def handle_playback(current_user):
                 }
                 user_service.update_current_playback(user_id, current_song)
 
-            # Надсилання команди через PubNub
             command = {"action": action}
             success = pubnub_client.publish_message(user_doc['channel_name_commands'], command)
             if success:
@@ -108,7 +107,6 @@ def handle_playback(current_user):
             if position is None:
                 return jsonify({"error": "position is required for seek action."}), 400
 
-            # Оновлення поточного відтворення в MongoDB
             current_song = user_service.get_current_playback(user_id)
             if current_song:
                 current_song["position"] = position
@@ -128,7 +126,6 @@ def handle_playback(current_user):
                 }
                 user_service.update_current_playback(user_id, current_song)
 
-            # Надсилання команди через PubNub
             command = {"action": "seek", "position": position}
             success = pubnub_client.publish_message(user_doc['channel_name_commands'], command)
             if success:
@@ -142,7 +139,6 @@ def handle_playback(current_user):
             if not mode:
                 return jsonify({"error": "mode is required for set_mode action."}), 400
 
-            # Оновлення поточного відтворення в MongoDB
             current_song = user_service.get_current_playback(user_id)
             if current_song:
                 current_song["mode"] = mode
@@ -162,7 +158,6 @@ def handle_playback(current_user):
                 }
                 user_service.update_current_playback(user_id, current_song)
 
-            # Надсилання команди через PubNub
             command = {"action": "set_mode", "mode": mode}
             success = pubnub_client.publish_message(user_doc['channel_name_commands'], command)
             if success:
@@ -176,13 +171,11 @@ def handle_playback(current_user):
             if enabled is None:
                 return jsonify({"error": "enabled is required for set_motion_detection action."}), 400
 
-            # Оновлення налаштувань користувача
             preferences = user_doc.get("preferences", {})
             preferences["motion_detection"] = enabled
             user_service.save_preferences(user_id, preferences)
             logger.info(f"Set motion_detection to {enabled} for user {user_id}.")
 
-            # Оновлення поточного відтворення в MongoDB
             current_song = user_service.get_current_playback(user_id)
             if current_song:
                 current_song["motion_detected"] = enabled
@@ -202,7 +195,6 @@ def handle_playback(current_user):
                 }
                 user_service.update_current_playback(user_id, current_song)
 
-            # Надсилання команди через PubNub
             command = {"action": "set_motion_detection", "enabled": enabled}
             success = pubnub_client.publish_message(user_doc['channel_name_commands'], command)
             if success:

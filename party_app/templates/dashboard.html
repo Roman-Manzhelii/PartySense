@@ -1,93 +1,118 @@
-<!-- templates/dashboard.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PartySense</title>
-    <link rel="stylesheet" href="/static/css/styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>PartySense</title>
+  <!-- Підключаємо чистий CSS (Mobile First + Glow) -->
+  <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
-    <h1>Welcome, {{ user }}!</h1>
+  <h1>Welcome, {{ user }}!</h1>
 
-    <!-- Playback Controls -->
-    <form method="POST" id="playback-form">
-        <input type="hidden" name="action" value="play_music">
-        <label for="video_id">Video ID:</label>
-        <input type="text" id="video_id" name="video_id" required>
-        <button type="submit">Play</button>
+  <!-- Підключаємо lottie (без атрибута integrity) -->
+  <script 
+    src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.9.6/lottie.min.js" 
+    referrerpolicy="no-referrer">
+  </script>
+
+  <!-- Контейнер для Lottie-анімації -->
+  <!-- Без інлайнових стилів — все перенесемо у styles.css -->
+  <div id="lottie-container">
+    <!-- Lottie-анімація вставляється за допомогою JS у main.js -->
+  </div>
+
+  <!-- Playback Controls -->
+  <form method="POST" id="playback-form">
+    <input type="hidden" name="action" value="play_music">
+    <label for="video_id">Video ID:</label>
+    <input type="text" id="video_id" name="video_id" required>
+    <button type="submit">Play</button>
+  </form>
+
+  <button onclick="controlMusic('pause')">Pause</button>
+  <button onclick="controlMusic('resume')">Resume</button>
+  <button onclick="controlMusic('next')">Next</button>
+  <button onclick="controlMusic('previous')">Previous</button>
+
+  <!-- Preferences -->
+  <form method="POST">
+    <input type="hidden" name="action" value="update_preferences">
+
+    <label for="volume">Volume (0-100):</label>
+    <input 
+      type="range"
+      id="volume"
+      name="volume"
+      min="0"
+      max="100"
+      step="1"
+      value="{{ (preferences.volume * 100) | int }}"
+      oninput="document.getElementById('volume-display').textContent = this.value + '%'"
+    >
+    <span id="volume-display">{{ (preferences.volume * 100) | int }}%</span>
+
+    <label for="led_mode">LED Mode:</label>
+    <select id="led_mode" name="led_mode">
+      {% for mode in allowed_modes %}
+      <option value="{{ mode }}" {% if preferences.led_mode == mode %}selected{% endif %}>{{ mode }}</option>
+      {% endfor %}
+    </select>
+    
+    <label for="motion_detection">Motion Detection:</label>
+    <input 
+      type="checkbox"
+      id="motion_detection"
+      name="motion_detection"
+      {% if preferences.motion_detection %}checked{% endif %}
+    >
+    <button type="submit">Update Preferences</button>
+  </form>
+
+  <!-- Улюблені пісні (Favorites) -->
+  <h2>Your Favorites</h2>
+  <div id="favorites">
+    <ul>
+      {% for song in favorites %}
+      <li>
+        <strong>{{ song.title }}</strong>
+        <button onclick="removeFavorite('{{ song.video_id }}')">Remove</button>
+      </li>
+      {% endfor %}
+    </ul>
+    <form id="add-favorite-form">
+      <input type="text" id="favorite_video_id" placeholder="Video ID" required>
+      <input type="text" id="favorite_title" placeholder="Title" required>
+      <input type="text" id="favorite_thumbnail_url" placeholder="Thumbnail URL" required>
+      <input type="number" id="favorite_duration" placeholder="Duration (sec)" required>
+      <button type="submit">Add to Favorites</button>
     </form>
+  </div>
 
-    <button onclick="controlMusic('pause')">Pause</button>
-    <button onclick="controlMusic('resume')">Resume</button>
-    <button onclick="controlMusic('next')">Next</button>
-    <button onclick="controlMusic('previous')">Previous</button>
+  <!-- Search Music -->
+  <div id="search-container">
+    <label for="search">Search:</label>
+    <input type="text" id="search" placeholder="Enter song or artist" autocomplete="off">
+    <button onclick="searchMusic()">Search</button>
+  </div>
 
-    <!-- Preferences -->
-    <form method="POST">
-        <input type="hidden" name="action" value="update_preferences">
-        <label for="volume">Volume (0-100):</label>
-        <input type="range" id="volume" name="volume" min="0" max="100" step="1" 
-               value="{{ (preferences.volume * 100) | int }}"
-               oninput="document.getElementById('volume-display').textContent = this.value + '%'">
-        <span id="volume-display">{{ (preferences.volume * 100) | int }}%</span>
+  <div id="search-results">
+    <div id="results-grid" class="results-grid"></div>
+    <div id="loading" style="display: none;">Loading...</div>
+  </div>
 
-        <label for="led_mode">LED Mode:</label>
-        <select id="led_mode" name="led_mode">
-            {% for mode in allowed_modes %}
-                <option value="{{ mode }}" {% if preferences.led_mode == mode %}selected{% endif %}>{{ mode }}</option>
-            {% endfor %}
-        </select>
-        
-        <label for="motion_detection">Motion Detection:</label>
-        <input type="checkbox" id="motion_detection" name="motion_detection" {% if preferences.motion_detection %}checked{% endif %}>
-        
-        <button type="submit">Update Preferences</button>
-    </form>
+  <!-- Playback Status -->
+  <div id="playback-status">
+    <h2>Current Playback</h2>
+    <p>Title: <span id="current-song-title">N/A</span></p>
+    <p>State: <span id="playback-state">Stopped</span></p>
+    <p>Position: <span id="playback-position">0 sec</span></p>
+  </div>
 
-    <!-- Улюблені пісні -->
-    <h2>Your Favorites</h2>
-    <div id="favorites">
-        <ul>
-            {% for song in favorites %}
-                <li>
-                    <strong>{{ song.title }}</strong>
-                    <button onclick="removeFavorite('{{ song.video_id }}')">Remove</button>
-                </li>
-            {% endfor %}
-        </ul>
-        <form id="add-favorite-form">
-            <input type="text" id="favorite_video_id" placeholder="Video ID" required>
-            <input type="text" id="favorite_title" placeholder="Title" required>
-            <input type="text" id="favorite_thumbnail_url" placeholder="Thumbnail URL" required>
-            <input type="number" id="favorite_duration" placeholder="Duration (sec)" required>
-            <button type="submit">Add to Favorites</button>
-        </form>
-    </div>
+  <a href="/logout">Logout</a>
 
-    <!-- Search Music -->
-    <div id="search-container">
-        <label for="search">Search:</label>
-        <input type="text" id="search" placeholder="Enter song or artist" autocomplete="off">
-        <button onclick="searchMusic()">Search</button>
-    </div>
-
-    <div id="search-results">
-        <div id="results-grid" class="results-grid"></div>
-        <div id="loading" style="display: none;">Loading...</div>
-    </div>
-
-    <!-- Playback Status -->
-    <div id="playback-status">
-        <h2>Current Playback</h2>
-        <p>Title: <span id="current-song-title">N/A</span></p>
-        <p>State: <span id="playback-state">Stopped</span></p>
-        <p>Position: <span id="playback-position">0 sec</span></p>
-    </div>
-
-    <a href="/logout">Logout</a>
-
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js" crossorigin="anonymous"></script>
-    <script src="/static/js/main.js"></script>
+  <!-- Socket.IO та ваш main.js -->
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js" crossorigin="anonymous"></script>
+  <script src="/static/js/main.js"></script>
 </body>
 </html>

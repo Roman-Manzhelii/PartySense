@@ -1,4 +1,3 @@
-# blueprints/search.py
 from flask import Blueprint, jsonify, request, redirect, session
 from services.search_service import SearchService
 
@@ -15,9 +14,7 @@ def search_music():
     if not query:
         return jsonify({"error": "No query provided"}), 400
 
-    # Додаткове логування для відлагодження
     print(f"Search query: '{query}', Page token: '{page_token}'")
-
     try:
         results = search_service.search_youtube_music(query, page_token=page_token)
         if results:

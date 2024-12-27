@@ -1,285 +1,213 @@
-/* static/css/styles.css */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 html, body {
-    margin: 0;
-    padding: 0;
-    font-family: Arial, sans-serif;
-    background-color: #29252c;
-    color: #f66565;
+  height: 100%;
+  width: 100%;
+  font-family: Arial, sans-serif;
+  scroll-behavior: smooth;
 }
 
-h1, h2 {
-    text-align: center;
+/* Стилі прокрутки */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #222;
+}
+::-webkit-scrollbar-thumb {
+  background: #8228ec;
+  border-radius: 4px;
 }
 
-.bg-dark {
-    background-color: #29252c;
+/* ========== 2. Загальні змінні ========== */
+:root {
+  --color-fg: #f2f2f2;
+  --color-primary: #8228ec;    /* Основний фіолетовий */
+  --color-secondary: #f626af;  /* Яскравий рожевий */
+  --color-bg-dark: #0d1224;    /* Темне тло */
+  --color-bg-card: #1b1b2f;    /* Тло для карток */
+  --color-bg-hover: #2c2c3c;   /* Тло при hover */
+  --glow-active-opacity: 0.2;
+  --border-radius: 12px;
+  --transition-speed: 0.3s;
 }
 
-.text-light {
-    color: #f66565;
+/* ========== 3. Глобальні елементи ========== */
+body {
+  background-color: var(--color-bg-dark);
+  color: var(--color-fg);
+  line-height: 1.5;
+  min-width: 320px; /* Mobile-first */
 }
 
-.font-base {
-    font-family: 'Arial', sans-serif;
+h1, h2, h3, h4, h5 {
+  margin-bottom: 1rem;
+  font-weight: normal;
 }
 
-.header {
-    padding: 20px;
-    background-color: #433c48;
-    text-align: center;
+p {
+  margin-bottom: 1rem;
 }
 
-.heading-primary {
-    margin: 0;
-    font-size: 2rem;
-    color: #f33535;
+button {
+  cursor: pointer;
+  background: var(--color-primary);
+  color: var(--color-fg);
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: var(--border-radius);
+  transition: background var(--transition-speed), transform var(--transition-speed);
+}
+button:hover {
+  background: var(--color-secondary);
+  transform: scale(1.02);
 }
 
-.main-content {
-    max-width: 800px;
-    margin: 30px auto;
-    padding: 20px;
-    background-color: #0f0e10;
-    border-radius: 8px;
+/* ========== 4. Utility-класи (glow, transitions) ========== */
+.glow-container {
+  position: relative;
+}
+.glow-card {
+  position: relative;
+  background-color: var(--color-bg-card);
+  border-radius: var(--border-radius);
+  padding: 1rem;
+  margin: 1rem 0;
+  transition: box-shadow var(--transition-speed), transform var(--transition-speed);
+  box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+}
+.glow-card:hover,
+.glow-card:focus-within {
+  z-index: 2;
+  box-shadow: 0 0 10px var(--color-primary);
+  transform: translateY(-2px);
+}
+.glow-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--border-radius);
+  pointer-events: none;
+  opacity: 0;
+  background: conic-gradient(
+    from 180deg at 50% 70%,
+    var(--color-secondary) 0deg,
+    var(--color-primary) 72deg,
+    var(--color-secondary) 144deg,
+    #0025ba 216deg,
+    var(--color-secondary) 288deg,
+    #fafafa 360deg
+  );
+  transition: opacity 1s;
+}
+.glow-card:hover::before {
+  opacity: var(--glow-active-opacity);
 }
 
-.messages-list {
-    list-style: none;
-    padding: 0;
-    margin-bottom: 20px;
-}
-
-.message-item {
-    margin: 10px 0;
-    padding: 10px;
-    border-radius: 4px;
-    font-weight: bold;
-}
-
-.msg-error {
-    background-color: #e70e0e;
-    color: #fff;
-}
-
-.msg-success {
-    background-color: #f33535;
-    color: #fff;
-}
-
-.form-settings {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.form-label {
-    font-weight: bold;
-}
-
-.form-control-range {
-    width: 100%;
-    background: transparent;
-}
-
-.form-control-select {
-    background-color: #433c48;
-    color: #f66565;
-    border: 1px solid #f33535;
-    border-radius: 4px;
-    padding: 5px;
-}
-
-.btn {
-    border: none;
-    padding: 10px 20px;
-    cursor: pointer;
-    font-weight: bold;
-    border-radius: 4px;
-    text-transform: uppercase;
-}
-
-.btn-primary {
-    background-color: #f33535;
-    color: #0f0e10;
-}
-
-.btn-primary:hover {
-    background-color: #e70e0e;
-}
-
-.form-actions {
-    display: flex;
-    justify-content: flex-end;
-}
-
-/* Playlists */
-#playlists ul {
-    list-style-type: none;
-    padding: 0;
-}
-
-#playlists li {
-    margin: 10px 0;
-    padding: 10px;
-    background-color: #433c48;
-    border-radius: 4px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-#playlists li button {
-    background-color: #e70e0e;
-    color: #fff;
-    border: none;
-    padding: 5px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-#playlists li button:hover {
-    background-color: #c00a0a;
-}
-
+/* ========== 5. Окремі компоненти ========== */
 /* Favorites */
+#favorites {
+  margin-top: 2rem;
+}
 #favorites ul {
-    list-style-type: none;
-    padding: 0;
+  list-style: none;
+  padding: 0;
 }
-
 #favorites li {
-    margin: 10px 0;
-    padding: 10px;
-    background-color: #433c48;
-    border-radius: 4px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+  background: var(--color-bg-card);
+  border-radius: var(--border-radius);
+}
+#favorites li:hover {
+  background: var(--color-bg-hover);
 }
 
-#favorites li button {
-    background-color: #e70e0e;
-    color: #fff;
-    border: none;
-    padding: 5px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-#favorites li button:hover {
-    background-color: #c00a0a;
-}
-
-/* Categories */
-#categories ul {
-    list-style-type: none;
-    padding: 0;
-}
-
-#categories li {
-    margin: 10px 0;
-    padding: 10px;
-    background-color: #433c48;
-    border-radius: 4px;
-}
-
-#categories ul ul {
-    list-style-type: disc;
-    margin-left: 20px;
-}
-
-#categories form {
-    margin-top: 10px;
-}
-
-#categories form input, #categories form button {
-    padding: 5px;
-    margin-right: 10px;
-}
-
-#categories form button {
-    background-color: #f33535;
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-#categories form button:hover {
-    background-color: #e70e0e;
-}
-
-/* Autocomplete Suggestions */
-#autocomplete-suggestions {
-    position: absolute;
-    background-color: #fff;
-    border: 1px solid #ccc;
-    width: 100%; /* According to the width of the search input */
-    max-height: 150px;
-    overflow-y: auto;
-    z-index: 1000;
-    list-style-type: none;
-    padding: 0;
-    margin: 0;
-}
-
-#autocomplete-suggestions li {
-    padding: 8px;
-    cursor: pointer;
-}
-
-#autocomplete-suggestions li.highlight,
-#autocomplete-suggestions li:hover {
-    background-color: #f0f0f0;
-}
-
-/* Стилі для результатів пошуку */
-.results-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    border: 1px solid #ddd;
-    padding: 10px;
-}
-
-.result-card {
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    padding: 10px;
-    margin: 10px;
-    cursor: pointer;
-    width: 200px;
-    box-shadow: 2px 2px 6px rgba(0,0,0,0.1);
-}
-
-.result-card img {
-    width: 100%;
-    height: auto;
-    border-radius: 4px;
-}
-
-.result-card h4 {
-    font-size: 16px;
-    margin: 10px 0 0 0;
-}
-
-/* Стилі для контейнера пошуку */
+/* Search */
 #search-container {
-    position: relative;
-    width: 300px;
-    margin: 0 auto 20px auto; /* Центрування контейнера */
+  margin: 1rem 0;
+  text-align: center;
+}
+#search {
+  width: 90%;
+  max-width: 400px;
+  padding: 0.5rem;
+  border-radius: var(--border-radius);
+  border: 1px solid #333;
+  background: #111;
+  color: var(--color-fg);
 }
 
-/* Індикатор завантаження */
-#loading {
-    text-align: center;
-    color: #f66565;
-    font-weight: bold;
-    margin-top: 10px;
+/* Search results */
+#search-results {
+  margin: 1rem auto;
+  max-width: 900px;
+}
+.results-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 0.5rem;
+}
+.result-card {
+  flex: 1 1 150px;
+  max-width: 200px;
+  background-color: var(--color-bg-card);
+  border-radius: var(--border-radius);
+  padding: 0.5rem;
+  transition: background var(--transition-speed);
+}
+.result-card:hover {
+  background: var(--color-bg-hover);
+  cursor: pointer;
+}
+.result-card img {
+  width: 100%;
+  border-radius: var(--border-radius);
+}
+.result-card h4 {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  line-height: 1.2;
+}
+
+/* Playback status */
+#playback-status {
+  margin: 2rem 0;
+  background-color: var(--color-bg-card);
+  border-radius: var(--border-radius);
+  padding: 1rem;
+}
+
+#lottie-container {
+    width: 200px;
+    height: 200px;
+    margin: 2rem auto;
+}
+
+/* ========== 6. Медіа-запити (Mobile First -> планшети/десктопи) ========== */
+@media (min-width: 600px) {
+  body {
+    font-size: 16px;
+  }
+  #search-container {
+    margin: 2rem 0;
+  }
+}
+@media (min-width: 992px) {
+  body {
+    font-size: 18px;
+  }
+  .result-card {
+    max-width: 250px;
+  }
 }

@@ -1,19 +1,15 @@
-# mongodb_client.py
 from pymongo import MongoClient
 from datetime import datetime, timezone
 import os
 import logging
 
-# Налаштування логування
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# MongoDB setup
 MONGODB_URI = os.getenv("MONGODB_URI")
 mongo_client = MongoClient(MONGODB_URI)
 db = mongo_client["party_sense_db"]
 
-# Колекції
 users_collection = db["users"]
 playlists_collection = db["playlists"]
 favorites_collection = db["favorites"]
@@ -23,7 +19,6 @@ playback_history_collection = db["playback_history"]
 
 def create_indexes():
     try:
-        # Інедексація для користувачів
         existing_indexes = users_collection.index_information()
         if "google_id_1" not in existing_indexes:
             users_collection.create_index("google_id", unique=True)
@@ -31,7 +26,6 @@ def create_indexes():
         else:
             logger.info("Unique index on google_id already exists.")
 
-        # Інедексація для playback_history
         existing_playback_indexes = playback_history_collection.index_information()
         if "google_id_1_played_at_-1" not in existing_playback_indexes:
             playback_history_collection.create_index([("google_id", 1), ("played_at", -1)])
@@ -39,7 +33,6 @@ def create_indexes():
         else:
             logger.info("Compound index on playback_history already exists.")
 
-        # Інедексація для playlists
         existing_playlists_indexes = playlists_collection.index_information()
         if "google_id_1" not in existing_playlists_indexes:
             playlists_collection.create_index("google_id")
@@ -47,7 +40,6 @@ def create_indexes():
         else:
             logger.info("Index on google_id for playlists already exists.")
 
-        # Інедексація для favorites
         existing_favorites_indexes = favorites_collection.index_information()
         if "google_id_1" not in existing_favorites_indexes:
             favorites_collection.create_index("google_id")
@@ -55,7 +47,6 @@ def create_indexes():
         else:
             logger.info("Index on google_id for favorites already exists.")
 
-        # Інедексація для categories
         existing_categories_indexes = categories_collection.index_information()
         if "google_id_1" not in existing_categories_indexes:
             categories_collection.create_index("google_id")
@@ -63,7 +54,6 @@ def create_indexes():
         else:
             logger.info("Index on google_id for categories already exists.")
 
-        # Інедексація для current_playback
         existing_current_playback_indexes = current_playback_collection.index_information()
         if "google_id_1" not in existing_current_playback_indexes:
             current_playback_collection.create_index("google_id", unique=True)
@@ -73,7 +63,6 @@ def create_indexes():
     except Exception as e:
         logger.error(f"Error during creating indexes: {e}")
 
-# Функції для користувачів
 def get_user_by_google_id(google_id):
     return users_collection.find_one({"google_id": google_id})
 
@@ -108,7 +97,6 @@ def log_playback_history(google_id, video_id, title):
 def get_all_users():
     return users_collection.find({})
 
-# Функції для плейлистів
 def create_playlist(google_id, name, description=""):
     playlist_doc = {
         "google_id": google_id,
@@ -135,7 +123,6 @@ def delete_playlist(google_id, playlist_id):
     result = playlists_collection.delete_one({"_id": playlist_id, "google_id": google_id})
     return result.deleted_count > 0
 
-# Функції для улюблених пісень
 def create_favorites(google_id):
     favorites_doc = {
         "google_id": google_id,
@@ -162,7 +149,6 @@ def remove_favorite(google_id, video_id):
 def get_favorites(google_id):
     return favorites_collection.find_one({"google_id": google_id})
 
-# Функції для категорій
 def create_category(google_id, name, description=""):
     category = {
         "name": name,
@@ -185,7 +171,6 @@ def get_categories(google_id):
     category_doc = categories_collection.find_one({"google_id": google_id}, {"categories": 1})
     return category_doc.get("categories") if category_doc else []
 
-# Функції для поточного відтворення
 def get_current_playback(google_id):
     return current_playback_collection.find_one({"google_id": google_id})
 

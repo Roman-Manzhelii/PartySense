@@ -1,4 +1,3 @@
-# blueprints/favorites.py
 from flask import Blueprint, jsonify, request, current_app
 from services.user_service import UserService
 from decorators.token_required import token_required

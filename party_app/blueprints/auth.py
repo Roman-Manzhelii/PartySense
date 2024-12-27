@@ -1,4 +1,3 @@
-# blueprints/auth.py
 from flask import Blueprint, redirect, session, request, current_app
 from services.authentication_service import AuthenticationService
 from services.user_service import UserService
@@ -52,7 +51,8 @@ def authorized():
 
         now_utc = datetime.now(timezone.utc)
         logger.debug(f"Current server time (UTC): {now_utc}")
-        
+
+        # Якщо користувач перший раз — створюємо
         if not user_doc:
             channel_name_commands = f"user_{google_id}_commands"
             channel_name_status = f"user_{google_id}_status"
@@ -74,7 +74,7 @@ def authorized():
                 "channel_token_status": token_status,
                 "channel_token_status_expiration": expiration_status,
                 "playlists": [],
-                "favorites": None,  # Ставимо None, створимо при необхідності
+                "favorites": None,
                 "preferences": {
                     "volume": 0.5,
                     "led_mode": "default",
@@ -85,20 +85,20 @@ def authorized():
             user_service.save_user(user_doc)
             logger.info(f"New user {google_id} saved.")
 
-            # Створення документу favorites для користувача
+            # Створюємо документ favorites
             favorites_id = user_service.create_favorites(str(user_doc["_id"]))
-            # Можливо, додати favorites_id до користувача
             user_service.update_user_tokens(google_id, {"favorites": favorites_id})
             logger.info(f"Favorites created for user {google_id} with ID {favorites_id}.")
 
         else:
-            # Перевірка та оновлення токенів, якщо вони закінчилися
+            # Якщо користувач існує — перевіряємо та оновлюємо токени PubNub
             tokens_updated = user_service.update_tokens_if_expired(google_id, user_doc)
             if tokens_updated:
                 logger.info(f"Tokens updated for user {google_id}.")
 
         logger.info(f"User {google_id} authenticated successfully.")
         return redirect("/")
+
     except Exception as e:
         logger.error(f"Error during Google Login: {e}")
         logger.error(traceback.format_exc())

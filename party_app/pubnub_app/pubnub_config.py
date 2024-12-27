@@ -1,4 +1,3 @@
-# pubnub_app/pubnub_config.py
 import os
 from dotenv import load_dotenv
 from pubnub.pnconfiguration import PNConfiguration

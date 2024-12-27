@@ -1,4 +1,3 @@
-# pubnub_app/publisher.py
 from pubnub_app.pubnub_client import PubNubClient
 import logging
 

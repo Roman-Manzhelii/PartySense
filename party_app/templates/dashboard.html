@@ -27,7 +27,9 @@
     <form method="POST">
         <input type="hidden" name="action" value="update_preferences">
         <label for="volume">Volume (0-100):</label>
-        <input type="range" id="volume" name="volume" min="0" max="100" step="1" value="{{ (preferences.volume * 100) | int }}" oninput="document.getElementById('volume-display').textContent = this.value + '%'">
+        <input type="range" id="volume" name="volume" min="0" max="100" step="1" 
+               value="{{ (preferences.volume * 100) | int }}"
+               oninput="document.getElementById('volume-display').textContent = this.value + '%'">
         <span id="volume-display">{{ (preferences.volume * 100) | int }}%</span>
 
         <label for="led_mode">LED Mode:</label>
@@ -42,24 +44,6 @@
         
         <button type="submit">Update Preferences</button>
     </form>
-
-    <!-- Плейлисти -->
-    <h2>Your Playlists</h2>
-    <div id="playlists">
-        <ul>
-            {% for playlist in playlists %}
-                <li>
-                    <strong>{{ playlist.name }}</strong> - {{ playlist.description }}
-                    <button onclick="deletePlaylist('{{ playlist.playlist_id }}')">Delete</button>
-                </li>
-            {% endfor %}
-        </ul>
-        <form id="create-playlist-form">
-            <input type="text" id="playlist_name" placeholder="Playlist Name" required>
-            <input type="text" id="playlist_description" placeholder="Description">
-            <button type="submit">Create Playlist</button>
-        </form>
-    </div>
 
     <!-- Улюблені пісні -->
     <h2>Your Favorites</h2>
@@ -78,28 +62,6 @@
             <input type="text" id="favorite_thumbnail_url" placeholder="Thumbnail URL" required>
             <input type="number" id="favorite_duration" placeholder="Duration (sec)" required>
             <button type="submit">Add to Favorites</button>
-        </form>
-    </div>
-
-    <!-- Категорії -->
-    <h2>Your Categories</h2>
-    <div id="categories">
-        <ul>
-            {% for category in categories %}
-                <li>
-                    <strong>{{ category.name }}</strong> - {{ category.description }}
-                    <ul>
-                        {% for pl_id in category.playlists %}
-                            <li>Playlist ID: {{ pl_id }}</li>
-                        {% endfor %}
-                    </ul>
-                </li>
-            {% endfor %}
-        </ul>
-        <form id="create-category-form">
-            <input type="text" id="category_name" placeholder="Category Name" required>
-            <input type="text" id="category_description" placeholder="Description">
-            <button type="submit">Create Category</button>
         </form>
     </div>
 

@@ -67,10 +67,6 @@ app.register_blueprint(playback_bp)
 
 # Функція для обробки статусів з PubNub
 def handle_status_update(message):
-    """
-    Обробка статусів від Pi Zero через PubNub.
-    Оновлює current_playback у MongoDB та передає інформацію через WebSocket.
-    """
     try:
         user_id = message.get("user_id")
         current_song = message.get("current_song")
@@ -199,8 +195,8 @@ if __name__ == "__main__":
     with app.app_context():
         users = app.user_service.get_all_users()
         for user in users:
-            user_id = str(user["_id"])
-            pubnub_client.subscribe_to_status_channel(user_id, handle_status_update)
+            google_id = user["google_id"]
+            pubnub_client.subscribe_to_status_channel(google_id, handle_status_update)
         logger.info("Subscribed to all existing users' status channels.")
 
     socketio.run(app, host="localhost", port=5000, debug=True)

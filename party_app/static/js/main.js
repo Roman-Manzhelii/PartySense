@@ -6,381 +6,372 @@ const API = {
     FAVORITES: "/api/favorites",
     CATEGORIES: "/api/categories",
     PLAYBACK: "/api/playback"
-};
-
-let nextPageToken = null; // Потрібно для пагінації
-let isLoading = false;    // Запобігає одночасним запитам
-let currentQuery = "";    // Поточний пошуковий запит
-const loadedVideoIds = new Set(); // Щоб уникнути дублювання результатів
-
-// Debounce дозволяє обмежити частоту викликів функції
-function debounce(func, delay) {
-    let timeoutId;
-    return function(...args) {
-        if (timeoutId) clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => {
-            func.apply(this, args);
-        }, delay);
-    };
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-    const searchInput = document.getElementById("search");
-
-    // Створюємо список автодоповнення
-    const suggestionsList = createSuggestionsList(searchInput);
-
-    // Обробник автодоповнення з debounce
-    const debouncedHandleAutocomplete = debounce(() => {
-        handleAutocomplete(searchInput, suggestionsList);
-    }, 300);
-    searchInput.addEventListener("input", debouncedHandleAutocomplete);
-
-    const lottieContainer = document.getElementById('lottie-container');
-    if (lottieContainer) {
+  };
+  
+  let nextPageToken = null;
+  let isLoading = false;
+  let currentQuery = "";
+  const loadedVideoIds = new Set();
+  
+  // Висота закріпленого контейнера playback (щоб розуміти, коли пагінація)
+  const pinnedPlaybackHeight = 150; // або взяти з CSS var(--playback-height)
+  
+  // Ініціалізація
+  document.addEventListener("DOMContentLoaded", () => {
+    const container = document.getElementById("lottie-container");
+    if (container) {
       lottie.loadAnimation({
-        container: lottieContainer,
+        container: container,
         renderer: 'svg',
         loop: true,
         autoplay: true,
         path: '/static/lottie/gradient.json'
       });
     }
-
-
-    // Натискання Enter для пошуку
+  
+    setupSearch();
+    setupSocket();
+  });
+  
+  /* ========== HELPERS ========== */
+  function debounce(fn, delay) {
+    let timeout;
+    return (...args) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => fn.apply(this, args), delay);
+    };
+  }
+  
+  /* ========== SEARCH + AUTOCOMPLETE ========== */
+  function setupSearch() {
+    const searchInput = document.getElementById("search");
+    const suggestionsList = document.getElementById("autocomplete-suggestions");
+  
+    const debouncedAutocomplete = debounce(() => {
+      handleAutocomplete(searchInput, suggestionsList);
+    }, 300);
+  
+    searchInput.addEventListener("input", debouncedAutocomplete);
+  
+    // Enter => start search
     searchInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-            e.preventDefault();
-            initiateSearch(searchInput.value.trim());
-        }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        initiateSearch(searchInput.value.trim());
+      }
     });
-
-    // Довантаження результатів при прокручуванні сторінки
+  
+    // Замість перевірки "window.innerHeight + window.scrollY >= document.body.offsetHeight",
+    // перевіряємо прокручування до top playback-status
     window.addEventListener("scroll", debounce(() => {
-        if (isLoading || !nextPageToken) return;
-        if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 100)) {
-            console.log("Fetching more results on scroll");
-            fetchResults(currentQuery);
-        }
+      if (isLoading || !nextPageToken) return;
+      const playbackSection = document.getElementById("playback-status");
+      if (!playbackSection) return;
+  
+      // Відстань від верху документа до playback-status
+      const topOfPlayback = playbackSection.offsetTop;
+      // Поточна позиція прокрутки + видима висота
+      const scrolledBottom = window.scrollY + window.innerHeight;
+  
+      // Якщо користувач прокрутив до початку playback
+      if (scrolledBottom >= topOfPlayback) {
+        fetchResults(currentQuery);
+      }
     }, 200));
-
-    // Закриття підказок при кліку поза списком
-    document.addEventListener("click", (event) => {
-        clearSuggestionsOnClick(event, suggestionsList, searchInput);
+  
+    // При кліку поза підказками — ховаємо
+    document.addEventListener("click", (evt) => {
+      if (!suggestionsList.contains(evt.target) && evt.target !== searchInput) {
+        suggestionsList.innerHTML = "";
+      }
     });
-
-    // Підключення Socket.IO для оновлень в реальному часі
-    const socket = io();
-    socket.on('connect', () => {
-        console.log('Connected to WebSocket server');
-    });
-    socket.on('playback_update', (data) => {
-        console.log('Received playback update:', data);
-        updatePlaybackUI(data);
-    });
-    socket.on('disconnect', () => {
-        console.log('Disconnected from WebSocket server');
-    });
-
-    // Форма створення плейлиста (якщо раптом десь відображається)
-    const createPlaylistForm = document.getElementById("create-playlist-form");
-    if (createPlaylistForm) {
-        createPlaylistForm.addEventListener("submit", async (e) => {
-            e.preventDefault();
-            const name = document.getElementById("playlist_name").value.trim();
-            const description = document.getElementById("playlist_description").value.trim();
-            if (!name) {
-                alert("Playlist name is required.");
-                return;
-            }
-            try {
-                const response = await fetch(API.PLAYLISTS, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ name, description })
-                });
-                const data = await response.json();
-                if (response.ok) {
-                    alert("Playlist created successfully.");
-                } else {
-                    alert(`Error: ${data.error}`);
-                }
-            } catch (error) {
-                console.error("Error creating playlist:", error);
-            }
-        });
-    }
-
-    // Форма додавання до Favorites
-    const addFavoriteForm = document.getElementById("add-favorite-form");
-    if (addFavoriteForm) {
-        addFavoriteForm.addEventListener("submit", async (e) => {
-            e.preventDefault();
-            const video_id = document.getElementById("favorite_video_id").value.trim();
-            const title = document.getElementById("favorite_title").value.trim();
-            const thumbnail_url = document.getElementById("favorite_thumbnail_url").value.trim();
-            const duration = parseInt(document.getElementById("favorite_duration").value.trim());
-
-            if (!video_id || !title || !thumbnail_url || isNaN(duration)) {
-                alert("All fields are required and duration must be a number.");
-                return;
-            }
-
-            try {
-                const response = await fetch(API.FAVORITES, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        video_id,
-                        title,
-                        thumbnail_url,
-                        duration,
-                        added_at: new Date().toISOString()
-                    })
-                });
-                const data = await response.json();
-                if (response.ok) {
-                    alert("Song added to favorites.");
-                } else {
-                    alert(`Error: ${data.error}`);
-                }
-            } catch (error) {
-                console.error("Error adding favorite:", error);
-            }
-        });
-    }
-
-    // Форма створення категорії (також якщо десь використовується)
-    const createCategoryForm = document.getElementById("create-category-form");
-    if (createCategoryForm) {
-        createCategoryForm.addEventListener("submit", async (e) => {
-            e.preventDefault();
-            const name = document.getElementById("category_name").value.trim();
-            const description = document.getElementById("category_description").value.trim();
-            if (!name) {
-                alert("Category name is required.");
-                return;
-            }
-            try {
-                const response = await fetch(API.CATEGORIES, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ name, description })
-                });
-                const data = await response.json();
-                if (response.ok) {
-                    alert("Category created successfully.");
-                } else {
-                    alert(`Error: ${data.error}`);
-                }
-            } catch (error) {
-                console.error("Error creating category:", error);
-            }
-        });
-    }
-});
-
-/* ============== Пошук та автодоповнення ============== */
-
-function initiateSearch(query) {
-    if (!query) {
-        alert("Please enter a search query.");
-        return;
-    }
-    const resultsGrid = document.getElementById("results-grid");
-    const loadingIndicator = document.getElementById("loading");
-    if (!resultsGrid || !loadingIndicator) {
-        console.error("Required elements not found in DOM.");
-        return;
-    }
-    // Скидаємо попередні результати
-    resultsGrid.innerHTML = "";
-    nextPageToken = null;
-    currentQuery = query;
-    loadedVideoIds.clear();
-    fetchResults(query);
-}
-
-function createSuggestionsList(searchInput) {
-    const suggestionsList = document.createElement("ul");
-    suggestionsList.id = "autocomplete-suggestions";
-    searchInput.parentNode.insertBefore(suggestionsList, searchInput.nextSibling);
-    return suggestionsList;
-}
-
-async function handleAutocomplete(searchInput, suggestionsList) {
+  }
+  
+  function handleAutocomplete(searchInput, suggestionsList) {
     const query = searchInput.value.trim();
     if (query.length < 2) {
-        suggestionsList.innerHTML = "";
-        return;
+      suggestionsList.innerHTML = "";
+      return;
     }
-    try {
-        const suggestions = await fetchSuggestions(query);
-        updateSuggestionsUI(suggestions, searchInput, suggestionsList);
-    } catch (error) {
-        console.error("Error fetching autocomplete suggestions:", error);
-    }
-}
-
-async function fetchSuggestions(query) {
-    const response = await fetch(`${API.AUTOCOMPLETE}?query=${encodeURIComponent(query)}`);
-    return response.ok ? response.json() : [];
-}
-
-function updateSuggestionsUI(suggestions, searchInput, suggestionsList) {
+  
+    fetch(`${API.AUTOCOMPLETE}?query=${encodeURIComponent(query)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        updateSuggestionsUI(data, searchInput, suggestionsList);
+      })
+      .catch((err) => console.error("Autocomplete error:", err));
+  }
+  
+  function updateSuggestionsUI(suggestions, searchInput, suggestionsList) {
     suggestionsList.innerHTML = "";
     suggestions.forEach(({ title }) => {
-        const li = document.createElement("li");
-        li.textContent = title;
-        li.classList.add("suggestion-item");
-        li.addEventListener("click", () => {
-            searchInput.value = title;
-            suggestionsList.innerHTML = "";
-            initiateSearch(title);
-        });
-        suggestionsList.appendChild(li);
-    });
-}
-
-function clearSuggestionsOnClick(event, suggestionsList, searchInput) {
-    if (!suggestionsList.contains(event.target) && event.target !== searchInput) {
+      const li = document.createElement("li");
+      li.className = "suggestion-item";
+      li.textContent = title;
+      li.addEventListener("click", () => {
+        searchInput.value = title;
         suggestionsList.innerHTML = "";
+        initiateSearch(title);
+      });
+      suggestionsList.appendChild(li);
+    });
+  }
+  
+  function searchMusic() {
+    const val = document.getElementById("search").value.trim();
+    initiateSearch(val);
+  }
+  
+  function initiateSearch(query) {
+    if (!query) {
+      alert("Please enter a search query.");
+      return;
     }
-}
-
-/* ============== Запит на отримання результатів пошуку ============== */
-
-async function fetchResults(query) {
+    currentQuery = query;
+    nextPageToken = null;
+    loadedVideoIds.clear();
+  
+    const resultsGrid = document.getElementById("results-grid");
+    const loadingIndicator = document.getElementById("loading");
+  
+    if (!resultsGrid || !loadingIndicator) {
+      console.error("Missing #results-grid or #loading elements.");
+      return;
+    }
+    resultsGrid.innerHTML = "";
+    fetchResults(query);
+  }
+  
+  function fetchResults(query) {
     if (!query || isLoading) return;
     isLoading = true;
     updateLoadingIndicator(true);
-
-    try {
-        console.log(`Fetching results for query: '${query}', pageToken: '${nextPageToken}'`);
-        let url = `${API.SEARCH}?query=${encodeURIComponent(query)}`;
-        if (nextPageToken) {
-            url += `&pageToken=${encodeURIComponent(nextPageToken)}`;
-        }
-        const response = await fetch(url);
-        if (!response.ok) throw new Error("Failed to fetch results");
-        const data = await response.json();
-        console.log("Received data:", data);
+  
+    let url = `${API.SEARCH}?query=${encodeURIComponent(query)}`;
+    if (nextPageToken) {
+      url += `&pageToken=${encodeURIComponent(nextPageToken)}`;
+    }
+  
+    fetch(url)
+      .then((res) => res.json())
+      .then((data) => {
+        nextPageToken = data.nextPageToken || null;
         updateResultsUI(data);
-    } catch (error) {
-        console.error("Error fetching results:", error);
-    } finally {
+      })
+      .catch((err) => console.error("Search error:", err))
+      .finally(() => {
         isLoading = false;
         updateLoadingIndicator(false);
-    }
-}
-
-function updateResultsUI(data) {
+      });
+  }
+  
+  function updateResultsUI(data) {
     const resultsGrid = document.getElementById("results-grid");
-    nextPageToken = data.nextPageToken || null;
-    console.log(`Updating results UI. Next page token: '${nextPageToken}'`);
-
-    data.items.forEach(({ snippet, id }) => {
-        // Уникнення дублювання
-        if (loadedVideoIds.has(id.videoId)) return;
-        loadedVideoIds.add(id.videoId);
-
-        const card = document.createElement("div");
-        card.className = "result-card";
-
-        const img = document.createElement("img");
-        img.src = snippet.thumbnails.medium.url;
-        img.alt = snippet.title;
-
-        const title = document.createElement("h4");
-        title.textContent = snippet.title;
-
-        card.appendChild(img);
-        card.appendChild(title);
-
-        // Поки що простий обробник — повторний пошук
-        card.addEventListener("click", () => {
-            initiateSearch(snippet.title);
+    (data.items || []).forEach(({ snippet, id }) => {
+      if (loadedVideoIds.has(id.videoId)) return;
+      loadedVideoIds.add(id.videoId);
+  
+      const card = document.createElement("div");
+      card.className = "result-card";
+  
+      const img = document.createElement("img");
+      img.src = snippet.thumbnails.medium.url;
+      img.alt = snippet.title;
+  
+      const titleElem = document.createElement("h4");
+      titleElem.textContent = snippet.title;
+  
+      // Клік => playSongFromSearch()
+      card.addEventListener("click", () => {
+        playSongFromSearch({
+          video_id: id.videoId,
+          title: snippet.title,
+          thumbnail_url: snippet.thumbnails.medium.url,
+          duration: 0 // При бажанні можна отримати з API
         });
-
-        resultsGrid.appendChild(card);
+      });
+  
+      card.appendChild(img);
+      card.appendChild(titleElem);
+      resultsGrid.appendChild(card);
     });
-    console.log(`After update, nextPageToken is: '${nextPageToken}'`);
-}
-
-function updateLoadingIndicator(show) {
+  }
+  
+  function updateLoadingIndicator(show) {
     const loadingIndicator = document.getElementById("loading");
     loadingIndicator.style.display = show ? "block" : "none";
-}
-
-/* ============== Контроль музики ============== */
-
-function controlMusic(action) {
+  }
+  
+  /* ========== SOCKET.IO ========== */
+  function setupSocket() {
+    const socket = io();
+    socket.on("connect", () => console.log("Socket connected"));
+    socket.on("playback_update", (data) => {
+      console.log("playback_update:", data);
+      updatePlaybackUI(data);
+    });
+    socket.on("disconnect", () => console.log("Socket disconnected"));
+  }
+  
+  /* ========== MUSIC PLAYBACK & FAVORITES ========== */
+  function controlMusic(action) {
     fetch(API.CONTROL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action })
     })
-    .then((response) => response.json())
+    .then((res) => res.json())
     .then((data) => {
-        if (data.success) {
-            console.log(`Music control response:`, data);
-        } else {
-            console.error(`Error:`, data.error);
-        }
+      if (!data.success) {
+        console.error(data.error || "Music control error");
+      }
     })
-    .catch((error) => console.error("Error controlling music:", error));
-}
-
-function searchMusic() {
-    const query = document.getElementById("search").value.trim();
-    initiateSearch(query);
-}
-
-/* ============== Оновлення UI при зміні стану відтворення ============== */
-
-function updatePlaybackUI(data) {
+    .catch((err) => console.error("controlMusic error:", err));
+  }
+  
+  // При кліку на результат пошуку
+  function playSongFromSearch(songData) {
+    // Надсилаємо запит на відтворення + додамо логіку "логування історії"
+    fetch(API.PLAYBACK, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "play",
+        video_id: songData.video_id,
+        position: 0,
+        mode: "default",
+        // thumbnail, title => потрібні для історії
+        thumbnail_url: songData.thumbnail_url,
+        title: songData.title
+      })
+    })
+    .then((res) => res.json())
+    .then((resp) => {
+      console.log("Play from search:", resp);
+      updateCurrentPlaybackUI(songData, "playing", 0);
+    })
+    .catch((err) => console.error("playSongFromSearch error:", err));
+  }
+  
+  // При кліку на "Play" у Favorites
+  function playSongFromFavorites(btn) {
+    const li = btn.closest(".favorite-item");
+    if (!li) return;
+  
+    const video_id = li.dataset.videoId;
+    const title = li.dataset.title;
+    const thumbnail = li.dataset.thumbnail;
+    const duration = li.dataset.duration || 0;
+  
+    fetch(API.PLAYBACK, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "play",
+        video_id,
+        position: 0,
+        mode: "default",
+        thumbnail_url: thumbnail,
+        title: title
+      })
+    })
+    .then((res) => res.json())
+    .then((data) => {
+      console.log("Playing favorite:", data);
+      updateCurrentPlaybackUI({ video_id, title, thumbnail_url: thumbnail, duration }, "playing", 0);
+    })
+    .catch((err) => console.error("playSongFromFavorites error:", err));
+  }
+  
+  // Локальне оновлення current playback
+  function updateCurrentPlaybackUI(songData, state, position) {
+    document.getElementById("current-song-title").textContent = songData.title || "Unknown";
+    document.getElementById("playback-state").textContent = state || "Stopped";
+    document.getElementById("playback-position").textContent = `${position} sec`;
+  
+    window.__currentPlaybackId = songData.video_id || "";
+    checkIfFavorite(songData.video_id);
+  }
+  
+  // Перевірка чи в Fav
+  function checkIfFavorite(video_id) {
+    if (!video_id) return;
+    fetch(API.FAVORITES)
+      .then((res) => res.json())
+      .then((data) => {
+        const { favorites } = data;
+        const isFav = favorites.some((s) => s.video_id === video_id);
+        const heartBtn = document.getElementById("current-heart-btn");
+        if (heartBtn) {
+          heartBtn.textContent = isFav ? "♥" : "♡";
+        }
+      })
+      .catch((err) => console.error("checkIfFavorite error:", err));
+  }
+  
+  function toggleFavoriteInPlayback() {
+    const video_id = window.__currentPlaybackId;
+    if (!video_id) return;
+    toggleFavorite(video_id);
+  }
+  
+  // Якщо немає -> додати, інакше видалити
+  function toggleFavorite(video_id) {
+    fetch(API.FAVORITES)
+      .then((res) => res.json())
+      .then((data) => {
+        const { favorites } = data;
+        const isInFav = favorites.some((s) => s.video_id === video_id);
+        if (isInFav) removeFavorite(video_id);
+        else addFavorite(video_id);
+      })
+      .catch((err) => console.error("toggleFavorite fetch error:", err));
+  }
+  
+  // Додаємо в Favorites
+  function addFavorite(video_id) {
+    const title = document.getElementById("current-song-title").textContent || "Unknown Title";
+    const thumbnail_url = "";
+    const duration = 0;
+  
+    fetch(API.FAVORITES, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        video_id, title, thumbnail_url, duration, added_at: new Date().toISOString()
+      })
+    })
+    .then((res) => res.json())
+    .then(() => {
+      document.getElementById("current-heart-btn").textContent = "♥";
+      alert(`Song '${title}' added to favorites.`);
+    })
+    .catch((err) => console.error("addFavorite error:", err));
+  }
+  
+  // Видаляємо з Favorites
+  function removeFavorite(video_id) {
+    fetch(`${API.FAVORITES}/${video_id}`, { method: "DELETE" })
+      .then((res) => res.json())
+      .then(() => {
+        document.getElementById("current-heart-btn").textContent = "♡";
+        alert(`Song removed from favorites.`);
+        // Видаляємо з DOM (якщо існує)
+        const li = document.querySelector(`.favorite-item[data-video-id="${video_id}"]`);
+        if (li) li.remove();
+      })
+      .catch((err) => console.error("removeFavorite error:", err));
+  }
+  
+  // Коли надходить playback_update через SocketIO
+  function updatePlaybackUI(data) {
     if (!data || !data.current_song) return;
-    const { title, state, position } = data.current_song;
-
-    const songTitleElement = document.getElementById("current-song-title");
-    if (songTitleElement) songTitleElement.textContent = title;
-
-    const playbackStateElement = document.getElementById("playback-state");
-    if (playbackStateElement) playbackStateElement.textContent = state;
-
-    const playbackPositionElement = document.getElementById("playback-position");
-    if (playbackPositionElement) playbackPositionElement.textContent = `${position} sec`;
-}
-
-/* ============== Інші допоміжні функції ============== */
-
-async function deletePlaylist(playlist_id) {
-    if (!confirm("Are you sure you want to delete this playlist?")) return;
-    try {
-        const response = await fetch(`${API.PLAYLISTS}/${playlist_id}`, { method: "DELETE" });
-        const data = await response.json();
-        if (response.ok) {
-            alert("Playlist deleted successfully.");
-        } else {
-            alert(`Error: ${data.error}`);
-        }
-    } catch (error) {
-        console.error("Error deleting playlist:", error);
-    }
-}
-
-async function removeFavorite(video_id) {
-    if (!confirm("Are you sure you want to remove this song from favorites?")) return;
-    try {
-        const response = await fetch(`${API.FAVORITES}/${video_id}`, { method: "DELETE" });
-        const data = await response.json();
-        if (response.ok) {
-            alert("Song removed from favorites.");
-        } else {
-            alert(`Error: ${data.error}`);
-        }
-    } catch (error) {
-        console.error("Error removing favorite:", error);
-    }
-}
+    const { video_id, title, state, position } = data.current_song;
+    document.getElementById("current-song-title").textContent = title || "N/A";
+    document.getElementById("playback-state").textContent = state || "Stopped";
+    document.getElementById("playback-position").textContent = `${position} sec`;
+  
+    window.__currentPlaybackId = video_id || "";
+    checkIfFavorite(video_id);
+  }
+  

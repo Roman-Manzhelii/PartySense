@@ -1,3 +1,4 @@
+/* 1. Скидання та базові стилі */
 *,
 *::before,
 *::after {
@@ -6,59 +7,44 @@
   padding: 0;
 }
 html, body {
-  height: 100%;
   width: 100%;
+  height: 100%;
   font-family: Arial, sans-serif;
   scroll-behavior: smooth;
 }
-
-/* Стилі прокрутки */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-::-webkit-scrollbar-track {
-  background: #222;
-}
-::-webkit-scrollbar-thumb {
-  background: #8228ec;
-  border-radius: 4px;
-}
-
-/* ========== 2. Загальні змінні ========== */
-:root {
-  --color-fg: #f2f2f2;
-  --color-primary: #8228ec;    /* Основний фіолетовий */
-  --color-secondary: #f626af;  /* Яскравий рожевий */
-  --color-bg-dark: #0d1224;    /* Темне тло */
-  --color-bg-card: #1b1b2f;    /* Тло для карток */
-  --color-bg-hover: #2c2c3c;   /* Тло при hover */
-  --glow-active-opacity: 0.2;
-  --border-radius: 12px;
-  --transition-speed: 0.3s;
-}
-
-/* ========== 3. Глобальні елементи ========== */
 body {
-  background-color: var(--color-bg-dark);
-  color: var(--color-fg);
+  background-color: #0d1224;
+  color: #e0e0e0;
   line-height: 1.5;
-  min-width: 320px; /* Mobile-first */
+  margin: 0 auto;
+  min-width: 320px;
+  position: relative; /* Щоб можна було робити відступ для pinned елементів */
+  padding-bottom: 150px; /* Відступ, щоб не перекривалось pinned playback (див. нижче) */
 }
 
-h1, h2, h3, h4, h5 {
-  margin-bottom: 1rem;
-  font-weight: normal;
+/* 2. Змінні */
+:root {
+  --color-primary: #8228ec;
+  --color-secondary: #f626af;
+  --color-bg-dark: #0d1224;
+  --color-bg-card: #1b1b2f;
+  --color-bg-hover: #2c2c3c;
+  --border-radius: 8px;
+  --transition-speed: 0.3s;
+
+  /* Висота playback + відступ */
+  --playback-height: 150px;
 }
 
-p {
-  margin-bottom: 1rem;
+/* 3. Заголовки, кнопки */
+h1, h2 {
+  text-align: center;
+  margin: 1rem 0;
 }
-
 button {
   cursor: pointer;
   background: var(--color-primary);
-  color: var(--color-fg);
+  color: #fff;
   border: none;
   padding: 0.5rem 1rem;
   border-radius: var(--border-radius);
@@ -69,57 +55,33 @@ button:hover {
   transform: scale(1.02);
 }
 
-/* ========== 4. Utility-класи (glow, transitions) ========== */
-.glow-container {
-  position: relative;
-}
-.glow-card {
-  position: relative;
-  background-color: var(--color-bg-card);
-  border-radius: var(--border-radius);
-  padding: 1rem;
-  margin: 1rem 0;
-  transition: box-shadow var(--transition-speed), transform var(--transition-speed);
-  box-shadow: 0 0 0 rgba(0, 0, 0, 0);
-}
-.glow-card:hover,
-.glow-card:focus-within {
-  z-index: 2;
-  box-shadow: 0 0 10px var(--color-primary);
-  transform: translateY(-2px);
-}
-.glow-card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: var(--border-radius);
-  pointer-events: none;
-  opacity: 0;
-  background: conic-gradient(
-    from 180deg at 50% 70%,
-    var(--color-secondary) 0deg,
-    var(--color-primary) 72deg,
-    var(--color-secondary) 144deg,
-    #0025ba 216deg,
-    var(--color-secondary) 288deg,
-    #fafafa 360deg
-  );
-  transition: opacity 1s;
-}
-.glow-card:hover::before {
-  opacity: var(--glow-active-opacity);
+/* 4. Компоненти */
+
+/* Lottie-контейнер */
+#lottie-container {
+  width: 200px;
+  height: 200px;
+  margin: 2rem auto;
 }
 
-/* ========== 5. Окремі компоненти ========== */
+/* Playback Controls */
+#playback-controls {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
 /* Favorites */
-#favorites {
+#favorites-section {
   margin-top: 2rem;
+  text-align: center;
 }
-#favorites ul {
+#favorites-list {
   list-style: none;
+  margin: 0 auto;
   padding: 0;
+  max-width: 500px;
 }
-#favorites li {
+.favorite-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -128,14 +90,46 @@ button:hover {
   background: var(--color-bg-card);
   border-radius: var(--border-radius);
 }
-#favorites li:hover {
+.favorite-item:hover {
+  background: var(--color-bg-hover);
+}
+.song-title {
+  flex: 1;
+  text-align: left;
+  margin-right: 0.5rem;
+}
+.heart-btn,
+.play-btn {
+  margin: 0 0.25rem;
+}
+
+/* Autocomplete Suggestions */
+#autocomplete-suggestions {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 0.25rem;
+  list-style: none;
+  width: 90%;
+  max-width: 400px;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: var(--border-radius);
+  z-index: 999;
+}
+.suggestion-item {
+  padding: 0.5rem;
+  cursor: pointer;
+}
+.suggestion-item:hover {
   background: var(--color-bg-hover);
 }
 
-/* Search */
+/* Search Results */
 #search-container {
   margin: 1rem 0;
   text-align: center;
+  position: relative; /* Для autocomplete позиціонування */
 }
 #search {
   width: 90%;
@@ -144,25 +138,25 @@ button:hover {
   border-radius: var(--border-radius);
   border: 1px solid #333;
   background: #111;
-  color: var(--color-fg);
+  color: #fff;
 }
 
-/* Search results */
 #search-results {
   margin: 1rem auto;
   max-width: 900px;
+  text-align: center;
 }
 .results-grid {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   padding: 0.5rem;
+  justify-content: center;
 }
 .result-card {
-  flex: 1 1 150px;
-  max-width: 200px;
   background-color: var(--color-bg-card);
   border-radius: var(--border-radius);
+  width: 160px;
   padding: 0.5rem;
   transition: background var(--transition-speed);
 }
@@ -177,37 +171,54 @@ button:hover {
 .result-card h4 {
   margin-top: 0.5rem;
   font-size: 0.9rem;
-  line-height: 1.2;
 }
 
-/* Playback status */
+/* Current Playback (прикріплений внизу) */
 #playback-status {
-  margin: 2rem 0;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--playback-height);
   background-color: var(--color-bg-card);
-  border-radius: var(--border-radius);
+  border-top: 2px solid var(--color-primary);
+  z-index: 10000; /* вище за інші елементи */
   padding: 1rem;
+  text-align: center;
+}
+#playback-status h2 {
+  margin-bottom: 0.5rem;
+}
+#current-heart-btn {
+  position: absolute;
+  top: 8px;
+  right: 1rem;
+  background: transparent;
+  color: var(--color-secondary);
+  font-size: 1.5rem;
+  border: none;
+  cursor: pointer;
+  transition: transform var(--transition-speed);
+}
+#current-heart-btn:hover {
+  transform: scale(1.2);
 }
 
-#lottie-container {
-    width: 200px;
-    height: 200px;
-    margin: 2rem auto;
+/* Loading */
+#loading {
+  margin-top: 1rem;
+  color: var(--color-primary);
+  font-weight: bold;
 }
 
-/* ========== 6. Медіа-запити (Mobile First -> планшети/десктопи) ========== */
+/* Медіа-запити */
 @media (min-width: 600px) {
   body {
     font-size: 16px;
-  }
-  #search-container {
-    margin: 2rem 0;
   }
 }
 @media (min-width: 992px) {
   body {
     font-size: 18px;
-  }
-  .result-card {
-    max-width: 250px;
   }
 }

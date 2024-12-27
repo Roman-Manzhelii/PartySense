@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
+
   <h1>Welcome, {{ user }}!</h1>
 
   <!-- Підключаємо lottie (без атрибута integrity) -->
@@ -17,28 +18,20 @@
   </script>
 
   <!-- Контейнер для Lottie-анімації -->
-  <!-- Без інлайнових стилів — все перенесемо у styles.css -->
-  <div id="lottie-container">
-    <!-- Lottie-анімація вставляється за допомогою JS у main.js -->
-  </div>
+  <div id="lottie-container"></div>
 
   <!-- Playback Controls -->
-  <form method="POST" id="playback-form">
-    <input type="hidden" name="action" value="play_music">
-    <label for="video_id">Video ID:</label>
-    <input type="text" id="video_id" name="video_id" required>
-    <button type="submit">Play</button>
-  </form>
-
-  <button onclick="controlMusic('pause')">Pause</button>
-  <button onclick="controlMusic('resume')">Resume</button>
-  <button onclick="controlMusic('next')">Next</button>
-  <button onclick="controlMusic('previous')">Previous</button>
+  <div id="playback-controls">
+    <button onclick="controlMusic('pause')">Pause</button>
+    <button onclick="controlMusic('resume')">Resume</button>
+    <button onclick="controlMusic('next')">Next</button>
+    <button onclick="controlMusic('previous')">Previous</button>
+  </div>
 
   <!-- Preferences -->
   <form method="POST">
     <input type="hidden" name="action" value="update_preferences">
-
+    
     <label for="volume">Volume (0-100):</label>
     <input 
       type="range"
@@ -55,7 +48,9 @@
     <label for="led_mode">LED Mode:</label>
     <select id="led_mode" name="led_mode">
       {% for mode in allowed_modes %}
-      <option value="{{ mode }}" {% if preferences.led_mode == mode %}selected{% endif %}>{{ mode }}</option>
+      <option value="{{ mode }}" {% if preferences.led_mode == mode %}selected{% endif %}>
+        {{ mode }}
+      </option>
       {% endfor %}
     </select>
     
@@ -66,34 +61,41 @@
       name="motion_detection"
       {% if preferences.motion_detection %}checked{% endif %}
     >
+
     <button type="submit">Update Preferences</button>
   </form>
 
-  <!-- Улюблені пісні (Favorites) -->
-  <h2>Your Favorites</h2>
-  <div id="favorites">
-    <ul>
+  <!-- Список улюблених пісень (Favorites) -->
+  <section id="favorites-section">
+    <h2>Your Favorites</h2>
+    <ul id="favorites-list">
       {% for song in favorites %}
-      <li>
-        <strong>{{ song.title }}</strong>
-        <button onclick="removeFavorite('{{ song.video_id }}')">Remove</button>
+      <li class="favorite-item"
+          data-video-id="{{ song.video_id }}"
+          data-title="{{ song.title }}"
+          data-thumbnail="{{ song.thumbnail_url }}"
+          data-duration="{{ song.duration }}"
+      >
+        <span class="song-title">{{ song.title }}</span>
+        <button class="heart-btn" onclick="toggleFavorite('{{ song.video_id }}')">
+          ♥
+        </button>
+        <button class="play-btn" onclick="playSongFromFavorites(this)">
+          Play
+        </button>
       </li>
       {% endfor %}
     </ul>
-    <form id="add-favorite-form">
-      <input type="text" id="favorite_video_id" placeholder="Video ID" required>
-      <input type="text" id="favorite_title" placeholder="Title" required>
-      <input type="text" id="favorite_thumbnail_url" placeholder="Thumbnail URL" required>
-      <input type="number" id="favorite_duration" placeholder="Duration (sec)" required>
-      <button type="submit">Add to Favorites</button>
-    </form>
-  </div>
+  </section>
 
-  <!-- Search Music -->
+  <!-- Пошук музики -->
   <div id="search-container">
     <label for="search">Search:</label>
     <input type="text" id="search" placeholder="Enter song or artist" autocomplete="off">
     <button onclick="searchMusic()">Search</button>
+
+    <!-- Список автодоповнення -->
+    <ul id="autocomplete-suggestions"></ul>
   </div>
 
   <div id="search-results">
@@ -101,17 +103,21 @@
     <div id="loading" style="display: none;">Loading...</div>
   </div>
 
-  <!-- Playback Status -->
-  <div id="playback-status">
+  <!-- Поточний трек (закріплений внизу) -->
+  <section id="playback-status">
     <h2>Current Playback</h2>
     <p>Title: <span id="current-song-title">N/A</span></p>
     <p>State: <span id="playback-state">Stopped</span></p>
     <p>Position: <span id="playback-position">0 sec</span></p>
-  </div>
+    <!-- Сердечко для поточного треку, щоб додати/видалити з фаворитів -->
+    <button id="current-heart-btn" onclick="toggleFavoriteInPlayback()">
+      &#9825;
+    </button>
+  </section>
 
   <a href="/logout">Logout</a>
 
-  <!-- Socket.IO та ваш main.js -->
+  <!-- Socket.IO і ваш main.js -->
   <script src="https://cdn.socket.io/4.5.4/socket.io.min.js" crossorigin="anonymous"></script>
   <script src="/static/js/main.js"></script>
 </body>

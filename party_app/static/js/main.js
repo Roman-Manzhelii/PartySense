@@ -5,7 +5,9 @@ const API = {
     PLAYLISTS: "/api/playlists",
     FAVORITES: "/api/favorites",
     CATEGORIES: "/api/categories",
-    PLAYBACK: "/api/playback"
+    PLAYBACK: "/api/playback",
+    // Новий ендпоінт:
+    PREFERENCES: "/api/preferences"
 };
 
 let nextPageToken = null;
@@ -39,8 +41,11 @@ document.addEventListener("DOMContentLoaded", () => {
   // 3) Socket
   setupSocket();
 
-  // 4) Playback UI (shuffle, prev, play/pause, next, repeat, slider)
+  // 4) Playback UI
   setupPlaybackUI();
+
+  // 5) Preferences UI (із дебаунсом)
+  initPreferencesUI();
 });
 
 /* ========== Helpers ========== */
@@ -61,17 +66,19 @@ function setupSearch() {
     handleAutocomplete(searchInput, suggestionsList);
   }, 300);
 
-  searchInput.addEventListener("input", debouncedAutocomplete);
+  if (searchInput) {
+    searchInput.addEventListener("input", debouncedAutocomplete);
 
-  // Enter => start search
-  searchInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      initiateSearch(searchInput.value.trim());
-    }
-  });
+    // Enter => start search
+    searchInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        initiateSearch(searchInput.value.trim());
+      }
+    });
+  }
 
-  // Pagination with pinned playback
+  // Infinity scroll
   window.addEventListener("scroll", debounce(() => {
     if (isLoading || !nextPageToken) return;
     const pinned = document.getElementById("playback-status");
@@ -83,6 +90,7 @@ function setupSearch() {
 
   // Close suggestions if clicked outside
   document.addEventListener("click", (evt) => {
+    if (!suggestionsList) return;
     if (!suggestionsList.contains(evt.target) && evt.target !== searchInput) {
       suggestionsList.innerHTML = "";
     }
@@ -90,6 +98,7 @@ function setupSearch() {
 }
 
 function handleAutocomplete(searchInput, suggestionsList) {
+  if (!searchInput || !suggestionsList) return;
   const query = searchInput.value.trim();
   if (query.length < 2) {
     suggestionsList.innerHTML = "";
@@ -167,6 +176,7 @@ function renderSearchResults(data) {
   if (!resultsGrid) return;
 
   (data.items || []).forEach(({ snippet, id }) => {
+    if (!id || !snippet) return;
     if (loadedVideoIds.has(id.videoId)) return;
     loadedVideoIds.add(id.videoId);
 
@@ -213,10 +223,6 @@ function setupSocket() {
 }
 
 /* ========== 3. Playback, Favorites, Current Playback ========== */
-
-/** 
- * Ініціалізація нових кнопок: shuffle, prev, play/pause, next, repeat + прогрес-бар
- */
 function setupPlaybackUI() {
   const shuffleBtn = document.getElementById("btn-shuffle");
   const prevBtn = document.getElementById("btn-prev");
@@ -225,14 +231,10 @@ function setupPlaybackUI() {
   const repeatBtn = document.getElementById("btn-repeat");
 
   shuffleBtn?.addEventListener("click", () => {
-    // set_mode => shuffle
     fetch(API.PLAYBACK, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "set_mode",
-        mode: "shuffle"
-      })
+      body: JSON.stringify({ action: "set_mode", mode: "shuffle" })
     });
   });
 
@@ -242,10 +244,8 @@ function setupPlaybackUI() {
 
   playPauseBtn?.addEventListener("click", () => {
     if (currentPlayingState === "playing") {
-      // Pause
       sendPauseCommand();
     } else {
-      // Resume
       sendResumeCommand();
     }
   });
@@ -255,14 +255,10 @@ function setupPlaybackUI() {
   });
 
   repeatBtn?.addEventListener("click", () => {
-    // set_mode => repeat
     fetch(API.PLAYBACK, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "set_mode",
-        mode: "repeat"
-      })
+      body: JSON.stringify({ action: "set_mode", mode: "repeat" })
     });
   });
 
@@ -284,13 +280,13 @@ function sendControlAction(action) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action })
   })
-  .then(res => res.json())
-  .then(data => {
-    if (!data.success) {
-      console.error(data.error || "Music control error");
-    }
-  })
-  .catch(err => console.error("controlMusic error:", err));
+    .then(res => res.json())
+    .then(data => {
+      if (!data.success) {
+        console.error(data.error || "Music control error");
+      }
+    })
+    .catch(err => console.error("controlMusic error:", err));
 }
 
 function sendPauseCommand() {
@@ -347,12 +343,12 @@ function playSongFromSearch(songData) {
       timestamp: Date.now()
     })
   })
-  .then(res => res.json())
-  .then(resp => {
-    console.log("Play from search:", resp);
-    updateCurrentPlaybackUI(songData, "playing", 0);
-  })
-  .catch(err => console.error("playSongFromSearch error:", err));
+    .then(res => res.json())
+    .then(resp => {
+      console.log("Play from search:", resp);
+      updateCurrentPlaybackUI(songData, "playing", 0);
+    })
+    .catch(err => console.error("playSongFromSearch error:", err));
 }
 
 function playSongFromFavorites(btn) {
@@ -378,12 +374,12 @@ function playSongFromFavorites(btn) {
       timestamp: Date.now()
     })
   })
-  .then(res => res.json())
-  .then(data => {
-    console.log("Playing favorite:", data);
-    updateCurrentPlaybackUI({ video_id, title, thumbnail_url: thumbnail, duration }, "playing", 0);
-  })
-  .catch(err => console.error("playSongFromFavorites error:", err));
+    .then(res => res.json())
+    .then(data => {
+      console.log("Playing favorite:", data);
+      updateCurrentPlaybackUI({ video_id, title, thumbnail_url: thumbnail, duration }, "playing", 0);
+    })
+    .catch(err => console.error("playSongFromFavorites error:", err));
 }
 
 /* Fav UI updates */
@@ -424,34 +420,39 @@ function removeFavoriteUI(video_id) {
   if (li) li.remove();
 }
 
-/* Current Playback UI local update */
 function updateCurrentPlaybackUI(songData, state, pos) {
-  document.getElementById("current-song-title").textContent = songData.title || "Unknown";
+  const titleEl = document.getElementById("current-song-title");
+  if (titleEl) {
+    titleEl.textContent = songData.title || "Unknown";
+  }
   currentDuration = songData.duration || 0;
   currentPosition = pos || 0;
   currentPlayingState = state;
 
-  // If there's a slider, update max & value
   const slider = document.getElementById("playback-progress");
   if (slider) {
     slider.max = currentDuration;
     slider.value = currentPosition;
   }
 
-  document.getElementById("playback-state").textContent = state;
-  document.getElementById("playback-position").textContent = `${pos} sec`;
+  const playbackStateEl = document.getElementById("playback-state");
+  if (playbackStateEl) {
+    playbackStateEl.textContent = state;
+  }
+  const playbackPosEl = document.getElementById("playback-position");
+  if (playbackPosEl) {
+    playbackPosEl.textContent = `${pos} sec`;
+  }
 
   window.__currentPlaybackId = songData.video_id || "";
   checkIfFavorite(window.__currentPlaybackId);
 
-  // Update play/pause button icon
   const playPauseBtn = document.getElementById("btn-play-pause");
   if (playPauseBtn) {
     playPauseBtn.textContent = (state === "playing") ? "⏸" : "▶";
   }
 }
 
-/** Перевіряємо чи поточний трек у favorites */
 function checkIfFavorite(video_id) {
   if (!video_id) return;
   fetch(API.FAVORITES)
@@ -473,7 +474,6 @@ function toggleFavoriteInPlayback() {
   toggleFavorite(vid);
 }
 
-/** Якщо є => remove, якщо немає => add */
 function toggleFavorite(video_id) {
   fetch(API.FAVORITES)
     .then(res => res.json())
@@ -490,7 +490,8 @@ function toggleFavorite(video_id) {
 }
 
 function addFavorite(video_id) {
-  const title = document.getElementById("current-song-title").textContent || "Unknown Title";
+  const titleEl = document.getElementById("current-song-title");
+  const title = titleEl ? titleEl.textContent || "Unknown Title" : "Unknown Title";
   const songObj = {
     video_id,
     title,
@@ -504,20 +505,22 @@ function addFavorite(video_id) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(songObj)
   })
-  .then(res => res.json())
-  .then(() => {
-    document.getElementById("current-heart-btn").textContent = "♥";
-    alert(`Song '${title}' added to favorites.`);
-    updateFavoritesUI_afterAdd(songObj);
-  })
-  .catch(err => console.error("addFavorite error:", err));
+    .then(res => res.json())
+    .then(() => {
+      const heartBtn = document.getElementById("current-heart-btn");
+      if (heartBtn) heartBtn.textContent = "♥";
+      alert(`Song '${title}' added to favorites.`);
+      updateFavoritesUI_afterAdd(songObj);
+    })
+    .catch(err => console.error("addFavorite error:", err));
 }
 
 function removeFavorite(video_id) {
   fetch(`${API.FAVORITES}/${video_id}`, { method: "DELETE" })
     .then(res => res.json())
     .then(() => {
-      document.getElementById("current-heart-btn").textContent = "♡";
+      const heartBtn = document.getElementById("current-heart-btn");
+      if (heartBtn) heartBtn.textContent = "♡";
       alert(`Song removed from favorites.`);
       removeFavoriteUI(video_id);
     })
@@ -533,9 +536,15 @@ function updatePlaybackUI(data) {
   currentPosition = position || 0;
   currentDuration = duration || 0;
 
-  document.getElementById("current-song-title").textContent = title || "N/A";
-  document.getElementById("playback-state").textContent = state || "Stopped";
-  document.getElementById("playback-position").textContent = `${currentPosition} sec`;
+  const titleEl = document.getElementById("current-song-title");
+  if (titleEl) titleEl.textContent = title || "N/A";
+
+  const playbackStateEl = document.getElementById("playback-state");
+  if (playbackStateEl) playbackStateEl.textContent = state || "Stopped";
+
+  const playbackPosEl = document.getElementById("playback-position");
+  if (playbackPosEl) playbackPosEl.textContent = `${currentPosition} sec`;
+
   window.__currentPlaybackId = video_id || "";
 
   const slider = document.getElementById("playback-progress");
@@ -550,4 +559,50 @@ function updatePlaybackUI(data) {
   }
 
   checkIfFavorite(video_id);
+}
+
+/* ========== 4. Preferences ========== */
+
+// Робимо одну debounce-функцію на всі зміни prefs (500 мс)
+const debouncePrefsUpdate = debounce((prefs) => {
+  fetch(API.PREFERENCES, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(prefs)
+  })
+    .then(res => res.json())
+    .then(data => {
+      console.log("Preferences updated:", data);
+    })
+    .catch(err => console.error("Preferences update error:", err));
+}, 500);
+
+function initPreferencesUI() {
+  const volumeSlider = document.getElementById("volume-slider");
+  const volumeValue = document.getElementById("volume-value");
+  const ledSelect = document.getElementById("led-mode-select");
+  const motionToggle = document.getElementById("motion-detection-toggle");
+
+  if (volumeSlider && volumeValue) {
+    volumeSlider.addEventListener("input", () => {
+      const val = volumeSlider.value;
+      volumeValue.textContent = val;
+      // Викликаємо debounce-функцію
+      debouncePrefsUpdate({ volume: parseFloat(val) / 100 });
+    });
+  }
+
+  if (ledSelect) {
+    ledSelect.addEventListener("change", () => {
+      const mode = ledSelect.value;
+      debouncePrefsUpdate({ led_mode: mode });
+    });
+  }
+
+  if (motionToggle) {
+    motionToggle.addEventListener("change", () => {
+      const isEnabled = motionToggle.checked;
+      debouncePrefsUpdate({ motion_detection: isEnabled });
+    });
+  }
 }

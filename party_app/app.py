@@ -46,6 +46,7 @@ from blueprints.playlists import playlists_bp
 from blueprints.favorites import favorites_bp
 from blueprints.categories import categories_bp
 from blueprints.playback import playback_bp
+from blueprints.preferences import preferences_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(music_bp)
@@ -54,6 +55,7 @@ app.register_blueprint(playlists_bp)
 app.register_blueprint(favorites_bp)
 app.register_blueprint(categories_bp)
 app.register_blueprint(playback_bp)
+app.register_blueprint(preferences_bp)
 
 def handle_status_update(message):
     try:

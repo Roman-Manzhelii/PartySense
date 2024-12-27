@@ -63,7 +63,7 @@
 
   <!-- Закріплений внизу екрану блок Current Playback -->
   <section id="playback-status">
-    <h2>Current Playback</h2>
+    <h2><span id="current-song-title">N/A</span></h2>
 
     <!-- Кнопки керування (новий UI) -->
     <div id="playback-controls">
@@ -81,51 +81,48 @@
       <span id="prog-end">3:59</span>
     </div>
 
-    <!-- Форма налаштувань (volume, led_mode, motion_detection) -->
-    <form method="POST" style="margin-bottom:1rem;">
-      <input type="hidden" name="action" value="update_preferences">
+    <!-- Блок налаштувань поза формою -->
+    <div id="preferences-container">
+      <!-- Гучність -->
+      <div class="pref-item">
+        <span class="pref-icon">🔊</span>
+        <input 
+          type="range"
+          id="volume-slider"
+          min="0"
+          max="100"
+          step="1"
+          value="{{ (preferences.volume * 100) | int }}"
+        >
+        <span id="volume-value">{{ (preferences.volume * 100) | int }}</span>
+      </div>
 
-      <label for="volume">Volume:</label>
-      <input 
-        type="range"
-        id="volume"
-        name="volume"
-        min="0"
-        max="100"
-        step="1"
-        value="{{ (preferences.volume * 100) | int }}"
-        oninput="document.getElementById('volume-display').textContent = this.value + '%'"
-      >
-      <span id="volume-display">{{ (preferences.volume * 100) | int }}%</span>
+      <!-- LED Mode -->
+      <div class="pref-item">
+        <span class="pref-icon">💡</span>
+        <select id="led-mode-select">
+          <option value="default" {% if preferences.led_mode == "default" %}selected{% endif %}>Default</option>
+          <option value="party"   {% if preferences.led_mode == "party"   %}selected{% endif %}>Party</option>
+          <option value="chill"   {% if preferences.led_mode == "chill"   %}selected{% endif %}>Chill</option>
+        </select>
+      </div>
 
-      <label for="led_mode">LED Mode:</label>
-      <select id="led_mode" name="led_mode">
-        {% for mode in allowed_modes %}
-        <option value="{{ mode }}" {% if preferences.led_mode == mode %}selected{% endif %}>
-          {{ mode }}
-        </option>
-        {% endfor %}
-      </select>
-
-      <label for="motion_detection">Motion Detection:</label>
-      <input
-        type="checkbox"
-        id="motion_detection"
-        name="motion_detection"
-        {% if preferences.motion_detection %}checked{% endif %}
-      >
-
-      <button type="submit">Update Prefs</button>
-    </form>
+      <!-- Motion Detection -->
+      <div class="pref-item">
+        <span class="pref-icon">🚶</span>
+        <input 
+          type="checkbox"
+          id="motion-detection-toggle"
+          {% if preferences.motion_detection %}checked{% endif %}
+        >
+      </div>
+    </div>
 
     <!-- Текстова інформація, яку можна сховати або показувати (стан, позиція) -->
     <p style="display:none;">
       State: <span id="playback-state">Stopped</span>
       Position: <span id="playback-position">0 sec</span>
     </p>
-
-    <!-- Поточна пісня -->
-    <p>Title: <span id="current-song-title">N/A</span></p>
 
     <!-- Кнопка-сердечко для поточного треку -->
     <button id="current-heart-btn" onclick="toggleFavoriteInPlayback()">♡</button>

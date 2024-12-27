@@ -18,6 +18,7 @@ def login():
     logger.info("Redirecting to Google authorization URL.")
     return redirect(authorization_url)
 
+
 @auth_bp.route("/login/authorized")
 def authorized():
     try:
@@ -49,11 +50,8 @@ def authorized():
 
         pubnub_client = current_app.pubnub_client
 
-        now_utc = datetime.now(timezone.utc)
-        logger.debug(f"Current server time (UTC): {now_utc}")
-
-        # Якщо користувач перший раз — створюємо
         if not user_doc:
+            # Створюємо нового юзера
             channel_name_commands = f"user_{google_id}_commands"
             channel_name_status = f"user_{google_id}_status"
             token_commands, expiration_commands = pubnub_client.generate_token([channel_name_commands], ttl=60)
@@ -85,20 +83,19 @@ def authorized():
             user_service.save_user(user_doc)
             logger.info(f"New user {google_id} saved.")
 
-            # Створюємо документ favorites
-            favorites_id = user_service.create_favorites(str(user_doc["_id"]))
+            # Створюємо favorites, прив'язуємо за google_id
+            favorites_id = user_service.create_favorites(google_id)
             user_service.update_user_tokens(google_id, {"favorites": favorites_id})
             logger.info(f"Favorites created for user {google_id} with ID {favorites_id}.")
 
         else:
-            # Якщо користувач існує — перевіряємо та оновлюємо токени PubNub
+            # Оновлюємо токени, якщо треба
             tokens_updated = user_service.update_tokens_if_expired(google_id, user_doc)
             if tokens_updated:
                 logger.info(f"Tokens updated for user {google_id}.")
 
         logger.info(f"User {google_id} authenticated successfully.")
         return redirect("/")
-
     except Exception as e:
         logger.error(f"Error during Google Login: {e}")
         logger.error(traceback.format_exc())

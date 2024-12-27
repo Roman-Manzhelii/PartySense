@@ -22,11 +22,11 @@ def token_required(f):
                 logger.error(f"User with google_id {google_id} not found.")
                 return redirect("/unauthorized")
 
-            # Перевірка/оновлення токенів PubNub
             pubnub_client = current_app.pubnub_client
 
-            token_commands = user_doc.get('channel_token_commands')
-            expiration_commands = user_doc.get('channel_token_commands_expiration')
+            # Перевірка токенів commands
+            token_commands = user_doc.get("channel_token_commands")
+            expiration_commands = user_doc.get("channel_token_commands_expiration")
             if token_commands and expiration_commands:
                 if expiration_commands.tzinfo is None:
                     expiration_commands = expiration_commands.replace(tzinfo=timezone.utc)
@@ -42,6 +42,7 @@ def token_required(f):
                         logger.error("Failed to update channel_token_commands.")
                         return jsonify({'error': 'Failed to update token'}), 500
 
+            # Перевірка токенів status
             token_status = user_doc.get('channel_token_status')
             expiration_status = user_doc.get('channel_token_status_expiration')
             if token_status and expiration_status:
@@ -60,7 +61,6 @@ def token_required(f):
                         return jsonify({'error': 'Failed to update token'}), 500
 
             return f(current_user=user_doc, *args, **kwargs)
-
         except Exception as e:
             logger.error(f"Error in token_required decorator: {e}")
             logger.error(traceback.format_exc())

@@ -28,10 +28,9 @@ class UserService:
     def __init__(self, pubnub_client):
         self.pubnub_client = pubnub_client
 
-    # Користувачі
     def get_user_by_google_id(self, google_id):
         return get_user_by_google_id(google_id)
-    
+
     def save_user(self, user_doc):
         save_user(user_doc)
 
@@ -49,14 +48,13 @@ class UserService:
 
     def update_tokens_if_expired(self, google_id, user_doc):
         tokens_updated = False
-
         expiration_commands = user_doc.get("channel_token_commands_expiration")
         if expiration_commands and self.pubnub_client.is_token_expired(expiration_commands):
-            new_token_commands, new_expiration_commands = self.pubnub_client.generate_token([user_doc["channel_name_commands"]])
-            if new_token_commands:
+            new_cmd_token, new_cmd_exp = self.pubnub_client.generate_token([user_doc["channel_name_commands"]])
+            if new_cmd_token:
                 self.update_user_tokens(google_id, {
-                    "channel_token_commands": new_token_commands,
-                    "channel_token_commands_expiration": new_expiration_commands
+                    "channel_token_commands": new_cmd_token,
+                    "channel_token_commands_expiration": new_cmd_exp
                 })
                 tokens_updated = True
                 logger.info(f"Updated channel_token_commands for user {google_id}")
@@ -66,18 +64,17 @@ class UserService:
 
         expiration_status = user_doc.get("channel_token_status_expiration")
         if expiration_status and self.pubnub_client.is_token_expired(expiration_status):
-            new_token_status, new_expiration_status = self.pubnub_client.generate_token([user_doc["channel_name_status"]])
-            if new_token_status:
+            new_st_token, new_st_exp = self.pubnub_client.generate_token([user_doc["channel_name_status"]])
+            if new_st_token:
                 self.update_user_tokens(google_id, {
-                    "channel_token_status": new_token_status,
-                    "channel_token_status_expiration": new_expiration_status
+                    "channel_token_status": new_st_token,
+                    "channel_token_status_expiration": new_st_exp
                 })
                 tokens_updated = True
                 logger.info(f"Updated channel_token_status for user {google_id}")
             else:
                 logger.error("Failed to update channel_token_status.")
                 return False
-
         return tokens_updated
 
     def get_all_users(self):
@@ -85,9 +82,9 @@ class UserService:
 
     # Плейлисти
     def create_playlist(self, google_id, name, description=""):
-        playlist_id = create_playlist(google_id, name, description)
-        logger.info(f"Created playlist '{name}' with ID {playlist_id} for user {google_id}.")
-        return playlist_id
+        pid = create_playlist(google_id, name, description)
+        logger.info(f"Created playlist '{name}' with ID {pid} for user {google_id}.")
+        return pid
 
     def update_playlist(self, playlist_id, update_data):
         update_playlist(playlist_id, update_data)
@@ -106,9 +103,9 @@ class UserService:
 
     # Улюблені пісні
     def create_favorites(self, google_id):
-        favorites_id = create_favorites(google_id)
-        logger.info(f"Created favorites with ID {favorites_id} for user {google_id}.")
-        return favorites_id
+        fid = create_favorites(google_id)
+        logger.info(f"Created favorites with ID {fid} for user {google_id}.")
+        return fid
 
     def add_favorite(self, google_id, song):
         add_favorite(google_id, song)

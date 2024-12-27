@@ -4,7 +4,6 @@ import os
 from dotenv import load_dotenv
 import logging
 
-# Завантаження змінних середовища
 load_dotenv()
 
 from services.user_service import UserService
@@ -13,38 +12,34 @@ from services.search_service import SearchService
 from pubnub_app.pubnub_client import PubNubClient
 from decorators.token_required import token_required
 
-# Налаштування логування
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Ініціалізація Flask
 app = Flask(__name__)
-
 app.secret_key = os.getenv("SECRET_FLASK_KEY", "DEFAULT_SECRET_KEY")
 
-# Налаштування Cookie
 app.config.update(
     SESSION_COOKIE_SECURE=True,
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE='Lax',
 )
 
-# Ініціалізація SocketIO
 socketio = SocketIO(app)
 
 # Ініціалізація PubNubClient
 pubnub_client = PubNubClient()
-app.pubnub_client = pubnub_client  # Додаємо до додатку
+app.pubnub_client = pubnub_client
 
-# Ініціалізація UserService з PubNubClient
-user_service = UserService(pubnub_client)
-app.user_service = user_service  # Додаємо до додатку
-
-# Ініціалізація інших сервісів
+# Зберігаємо music_service та user_service у `app`
 music_service = MusicService()
+app.music_service = music_service
+
 search_service = SearchService()
 
-# Імпортуємо та реєструємо Blueprint'и
+user_service = UserService(pubnub_client)
+app.user_service = user_service
+
+# Імпорт та реєстрація Blueprint'ів
 from blueprints.auth import auth_bp
 from blueprints.music import music_bp
 from blueprints.search import search_bp
@@ -63,10 +58,14 @@ app.register_blueprint(playback_bp)
 
 
 def handle_status_update(message):
+    """
+    Обробка повідомлень від Pi через PubNub (user_X_status).
+    Оновлює current_playback у MongoDB, 
+    надсилає 'playback_update' клієнтам (через SocketIO).
+    """
     try:
         user_id = message.get("user_id")
         current_song = message.get("current_song")
-
         if not user_id or not current_song:
             logger.error("Invalid status message received.")
             return
@@ -74,7 +73,7 @@ def handle_status_update(message):
         app.user_service.update_current_playback(str(user_id), current_song)
         logger.info(f"Updated current_playback for user {user_id}.")
 
-        # Відправка оновлення через WebSocket
+        # Розсилаємо оновлення
         socketio.emit('playback_update', {'user_id': user_id, 'current_song': current_song}, broadcast=True)
         logger.info(f"Emitted playback_update for user {user_id}.")
 
@@ -93,53 +92,40 @@ def dashboard(current_user):
 
     if request.method == "POST":
         action = request.form.get("action")
-
         if action == "update_preferences":
-            # Обробка зміни налаштувань
             volume = min(max(float(request.form.get("volume", 50)) / 100, 0), 1)
             led_mode = request.form.get("led_mode", "default")
             motion_detection = 'motion_detection' in request.form
-            preferences = {
+            prefs = {
                 "volume": volume,
                 "led_mode": led_mode,
                 "motion_detection": motion_detection
             }
-            user_service.save_preferences(google_id, preferences)
+            user_service.save_preferences(google_id, prefs)
             logger.info(f"Preferences updated for user {google_id}.")
 
+            # Оповіщаємо Pi
             pubnub_client.publish_message(user_doc["channel_name_commands"], {
                 "action": "update_preferences",
-                "preferences": preferences
+                "preferences": prefs
             })
 
-        elif action == "play_music":
-            video_id = request.form.get("video_id")
-            if video_id:
-                video_title = music_service.fetch_video_title(video_id) or "Unknown Title"
-                music_service.play_youtube_music(video_id)
-                user_service.log_playback_history(google_id, video_id, video_title)
-                logger.info(f"Play command sent for video_id {video_id}.")
-
-                pubnub_client.publish_message(user_doc["channel_name_commands"], {
-                    "action": "play",
-                    "video_id": video_id,
-                    "position": 0
-                })
-
-    # Завантаження налаштувань
+    # Завантажуємо prefs
     preferences = user_service.get_preferences(google_id) or {
-        "volume": 0.5, "led_mode": "default", "motion_detection": True
+        "volume": 0.5,
+        "led_mode": "default",
+        "motion_detection": True
     }
 
-    # Завантаження улюблених треків
-    favorites = user_service.get_favorites(google_id)
-    favorites_list = favorites.get("songs", []) if favorites else []
+    # Завантажуємо favorites
+    favorites_doc = user_service.get_favorites(google_id)
+    favorites_list = favorites_doc.get("songs", []) if favorites_doc else []
 
     return render_template(
         "dashboard.html",
         user=current_user.get("name"),
         preferences=preferences,
-        allowed_modes=["default", "party", "chill"],  # Приклад дозволених режимів
+        allowed_modes=["default", "party", "chill"], 
         favorites=favorites_list
     )
 
@@ -169,13 +155,12 @@ if __name__ == "__main__":
     from mongodb_client import create_indexes
     create_indexes()
 
-    # Перед запуском сервера підписуємося на статус-канали
+    # Підписуємося на канали статусу для всіх існуючих користувачів
     with app.app_context():
         users = app.user_service.get_all_users()
         for user in users:
-            # Використовуємо google_id замість _id
-            google_id = user["google_id"]
-            pubnub_client.subscribe_to_status_channel(google_id, handle_status_update)
+            gid = user["google_id"]
+            pubnub_client.subscribe_to_status_channel(gid, handle_status_update)
         logger.info("Subscribed to all existing users' status channels.")
 
     socketio.run(app, host="localhost", port=5000, debug=True)

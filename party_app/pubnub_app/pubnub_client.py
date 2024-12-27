@@ -16,7 +16,7 @@ class PubNubClient:
 
     def generate_token(self, channels, ttl=60):
         try:
-            channels_list = [Channel(channel).read().write() for channel in channels]
+            channels_list = [Channel(ch).read().write() for ch in channels]
             envelope = self.pubnub.grant_token().channels(channels_list).ttl(ttl).sync()
             token = envelope.result.token
             expiration_time = datetime.now(timezone.utc) + timedelta(seconds=ttl)
@@ -39,8 +39,6 @@ class PubNubClient:
         if expiration_time.tzinfo is None:
             expiration_time = expiration_time.replace(tzinfo=timezone.utc)
             logger.debug("Converted expiration_time to offset-aware with UTC timezone.")
-        else:
-            logger.debug("expiration_time is already offset-aware.")
 
         is_expired = now_utc >= expiration_time
         logger.debug(f"Comparing now_utc: {now_utc} >= expiration_time: {expiration_time} = {is_expired}")
@@ -69,12 +67,13 @@ class PubNubClient:
         except Exception as e:
             logger.error(f"Error subscribing to status channel {channel}: {e}")
 
+
 class StatusListener:
     def __init__(self, callback):
         self.callback = callback
 
     def status(self, pubnub, status):
-        pass  # Якщо необхідно, обробляти статус-події PubNub
+        pass
 
     def message(self, pubnub, message):
         self.callback(message.message)

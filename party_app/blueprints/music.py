@@ -19,8 +19,6 @@ def control_music_route(current_user):
             return jsonify({"error": "Invalid action"}), 400
 
         pubnub_client = current_app.pubnub_client
-
-        # Публікація повідомлення до PubNub
         success = pubnub_client.publish_message(user_doc['channel_name_commands'], {'action': action})
         if success:
             logger.info(f"Music control action '{action}' published successfully.")

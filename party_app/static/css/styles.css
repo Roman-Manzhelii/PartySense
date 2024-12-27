@@ -1,4 +1,4 @@
-/* 1. Скидання та базові стилі */
+/* 1. Скидання + базові стилі */
 *,
 *::before,
 *::after {
@@ -10,7 +10,6 @@ html, body {
   width: 100%;
   height: 100%;
   font-family: Arial, sans-serif;
-  scroll-behavior: smooth;
 }
 body {
   background-color: #0d1224;
@@ -18,11 +17,10 @@ body {
   line-height: 1.5;
   margin: 0 auto;
   min-width: 320px;
-  position: relative; /* Щоб можна було робити відступ для pinned елементів */
-  padding-bottom: 150px; /* Відступ, щоб не перекривалось pinned playback (див. нижче) */
+  overflow-x: hidden;
 }
 
-/* 2. Змінні */
+/* Змінні */
 :root {
   --color-primary: #8228ec;
   --color-secondary: #f626af;
@@ -31,15 +29,12 @@ body {
   --color-bg-hover: #2c2c3c;
   --border-radius: 8px;
   --transition-speed: 0.3s;
-
-  /* Висота playback + відступ */
-  --playback-height: 150px;
+  --playback-height: 180px; /* мінімальна висота pinned playback */
 }
 
-/* 3. Заголовки, кнопки */
+/* Заголовки, кнопки */
 h1, h2 {
   text-align: center;
-  margin: 1rem 0;
 }
 button {
   cursor: pointer;
@@ -55,19 +50,11 @@ button:hover {
   transform: scale(1.02);
 }
 
-/* 4. Компоненти */
-
-/* Lottie-контейнер */
+/* Lottie */
 #lottie-container {
   width: 200px;
   height: 200px;
   margin: 2rem auto;
-}
-
-/* Playback Controls */
-#playback-controls {
-  text-align: center;
-  margin-bottom: 1rem;
 }
 
 /* Favorites */
@@ -103,19 +90,33 @@ button:hover {
   margin: 0 0.25rem;
 }
 
-/* Autocomplete Suggestions */
+/* Search */
+#search-container {
+  text-align: center;
+  position: relative; 
+}
+#search {
+  width: 90%;
+  max-width: 400px;
+  padding: 0.5rem;
+  border-radius: var(--border-radius);
+  border: 1px solid #333;
+  background: #111;
+  color: #fff;
+  outline: none;
+}
+
 #autocomplete-suggestions {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  margin-top: 0.25rem;
-  list-style: none;
   width: 90%;
   max-width: 400px;
   background: #111;
   border: 1px solid #333;
   border-radius: var(--border-radius);
-  z-index: 999;
+  z-index: 9999;
+  list-style: none;
 }
 .suggestion-item {
   padding: 0.5rem;
@@ -126,21 +127,6 @@ button:hover {
 }
 
 /* Search Results */
-#search-container {
-  margin: 1rem 0;
-  text-align: center;
-  position: relative; /* Для autocomplete позиціонування */
-}
-#search {
-  width: 90%;
-  max-width: 400px;
-  padding: 0.5rem;
-  border-radius: var(--border-radius);
-  border: 1px solid #333;
-  background: #111;
-  color: #fff;
-}
-
 #search-results {
   margin: 1rem auto;
   max-width: 900px;
@@ -173,25 +159,24 @@ button:hover {
   font-size: 0.9rem;
 }
 
-/* Current Playback (прикріплений внизу) */
+/* Current Playback pinned */
 #playback-status {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  height: var(--playback-height);
+  min-height: var(--playback-height);
   background-color: var(--color-bg-card);
-  border-top: 2px solid var(--color-primary);
-  z-index: 10000; /* вище за інші елементи */
+  border-top: 3px solid var(--color-primary);
+  z-index: 9999;
   padding: 1rem;
   text-align: center;
+  overflow-y: auto;
 }
-#playback-status h2 {
-  margin-bottom: 0.5rem;
-}
+
 #current-heart-btn {
   position: absolute;
-  top: 8px;
+  top: 1rem;
   right: 1rem;
   background: transparent;
   color: var(--color-secondary);
@@ -211,7 +196,7 @@ button:hover {
   font-weight: bold;
 }
 
-/* Медіа-запити */
+/* Media Queries */
 @media (min-width: 600px) {
   body {
     font-size: 16px;

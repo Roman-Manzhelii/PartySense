@@ -17,7 +17,6 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_FLASK_KEY", "DEFAULT_SECRET_KEY")
-
 app.config.update(
     SESSION_COOKIE_SECURE=True,
     SESSION_COOKIE_HTTPONLY=True,
@@ -26,11 +25,11 @@ app.config.update(
 
 socketio = SocketIO(app)
 
-# Ініціалізація PubNubClient
+# PubNub
 pubnub_client = PubNubClient()
 app.pubnub_client = pubnub_client
 
-# Зберігаємо music_service та user_service у `app`
+# Сервіси
 music_service = MusicService()
 app.music_service = music_service
 
@@ -39,7 +38,7 @@ search_service = SearchService()
 user_service = UserService(pubnub_client)
 app.user_service = user_service
 
-# Імпорт та реєстрація Blueprint'ів
+# Імпортуємо Blueprint'и
 from blueprints.auth import auth_bp
 from blueprints.music import music_bp
 from blueprints.search import search_bp
@@ -56,13 +55,7 @@ app.register_blueprint(favorites_bp)
 app.register_blueprint(categories_bp)
 app.register_blueprint(playback_bp)
 
-
 def handle_status_update(message):
-    """
-    Обробка повідомлень від Pi через PubNub (user_X_status).
-    Оновлює current_playback у MongoDB, 
-    надсилає 'playback_update' клієнтам (через SocketIO).
-    """
     try:
         user_id = message.get("user_id")
         current_song = message.get("current_song")
@@ -73,20 +66,16 @@ def handle_status_update(message):
         app.user_service.update_current_playback(str(user_id), current_song)
         logger.info(f"Updated current_playback for user {user_id}.")
 
-        # Розсилаємо оновлення
         socketio.emit('playback_update', {'user_id': user_id, 'current_song': current_song}, broadcast=True)
         logger.info(f"Emitted playback_update for user {user_id}.")
-
     except Exception as e:
         logger.error(f"Error handling status update: {e}")
-
 
 @app.route("/", methods=["GET", "POST"])
 @token_required
 def dashboard(current_user):
     google_id = current_user["google_id"]
     user_doc = user_service.get_user_by_google_id(google_id)
-
     if not user_doc:
         return redirect("/unauthorized")
 
@@ -102,22 +91,14 @@ def dashboard(current_user):
                 "motion_detection": motion_detection
             }
             user_service.save_preferences(google_id, prefs)
-            logger.info(f"Preferences updated for user {google_id}.")
-
-            # Оповіщаємо Pi
             pubnub_client.publish_message(user_doc["channel_name_commands"], {
                 "action": "update_preferences",
                 "preferences": prefs
             })
 
-    # Завантажуємо prefs
     preferences = user_service.get_preferences(google_id) or {
-        "volume": 0.5,
-        "led_mode": "default",
-        "motion_detection": True
+        "volume": 0.5, "led_mode": "default", "motion_detection": True
     }
-
-    # Завантажуємо favorites
     favorites_doc = user_service.get_favorites(google_id)
     favorites_list = favorites_doc.get("songs", []) if favorites_doc else []
 
@@ -125,37 +106,31 @@ def dashboard(current_user):
         "dashboard.html",
         user=current_user.get("name"),
         preferences=preferences,
-        allowed_modes=["default", "party", "chill"], 
+        allowed_modes=["default", "party", "chill"],
         favorites=favorites_list
     )
-
 
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect("/login")
 
-
 @app.route("/unauthorized")
 def unauthorized():
     return render_template('unauthorized.html'), 401
-
 
 @socketio.on('connect')
 def handle_connect():
     logger.info("Client connected via WebSocket.")
 
-
 @socketio.on('disconnect')
 def handle_disconnect():
     logger.info("Client disconnected from WebSocket.")
-
 
 if __name__ == "__main__":
     from mongodb_client import create_indexes
     create_indexes()
 
-    # Підписуємося на канали статусу для всіх існуючих користувачів
     with app.app_context():
         users = app.user_service.get_all_users()
         for user in users:

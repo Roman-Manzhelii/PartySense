@@ -1,26 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>PartySense</title>
-  <!-- Підключаємо наш CSS -->
+  <!-- Підключення наших стилів -->
   <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
 
+  <!-- Привітання та кнопка виходу -->
   <h1>Welcome, {{ user }}!</h1>
+  <a href="/logout">Logout</a>
 
-  <!-- Підключаємо lottie -->
-  <script 
-    src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.9.6/lottie.min.js" 
+  <!-- Lottie.js для анімації -->
+  <script
+    src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.9.6/lottie.min.js"
     referrerpolicy="no-referrer">
   </script>
-
+  
   <!-- Контейнер для Lottie-анімації -->
   <div id="lottie-container"></div>
 
-  <!-- Список улюблених пісень -->
+  <!-- Список улюблених -->
   <section id="favorites-section">
     <h2>Your Favorites</h2>
     <ul id="favorites-list">
@@ -32,12 +34,8 @@
           data-duration="{{ song.duration }}"
       >
         <span class="song-title">{{ song.title }}</span>
-        <button class="heart-btn" onclick="toggleFavorite('{{ song.video_id }}')">
-          ♥
-        </button>
-        <button class="play-btn" onclick="playSongFromFavorites(this)">
-          Play
-        </button>
+        <button class="heart-btn" onclick="toggleFavorite('{{ song.video_id }}')">♥</button>
+        <button class="play-btn" onclick="playSongFromFavorites(this)">Play</button>
       </li>
       {% endfor %}
     </ul>
@@ -46,21 +44,44 @@
   <!-- Пошук -->
   <div id="search-container">
     <label for="search">Search:</label>
-    <input type="text" id="search" placeholder="Enter song or artist" autocomplete="off">
+    <input
+      type="text"
+      id="search"
+      placeholder="Enter song or artist"
+      autocomplete="off"
+    >
     <button onclick="searchMusic()">Search</button>
+    <!-- Автодоповнення (autocomplete) -->
     <ul id="autocomplete-suggestions"></ul>
   </div>
 
+  <!-- Результати пошуку -->
   <div id="search-results">
     <div id="results-grid" class="results-grid"></div>
     <div id="loading" style="display:none;">Loading...</div>
   </div>
 
-  <!-- Поточне відтворення (закріплене внизу) -->
+  <!-- Закріплений внизу екрану блок Current Playback -->
   <section id="playback-status">
     <h2>Current Playback</h2>
 
-    <!-- Форма налаштувань (Volume, LED, Motion) -->
+    <!-- Кнопки керування (новий UI) -->
+    <div id="playback-controls">
+      <button id="btn-shuffle" class="playback-btn">🔀</button>
+      <button id="btn-prev" class="playback-btn">⏮</button>
+      <button id="btn-play-pause" class="playback-btn">▶</button>
+      <button id="btn-next" class="playback-btn">⏭</button>
+      <button id="btn-repeat" class="playback-btn">🔁</button>
+    </div>
+
+    <!-- Прогрес-бар: час програвання -->
+    <div id="playback-progress-container">
+      <span id="prog-start">0:00</span>
+      <input type="range" id="playback-progress" min="0" value="0" step="0.1">
+      <span id="prog-end">3:59</span>
+    </div>
+
+    <!-- Форма налаштувань (volume, led_mode, motion_detection) -->
     <form method="POST" style="margin-bottom:1rem;">
       <input type="hidden" name="action" value="update_preferences">
 
@@ -87,7 +108,7 @@
       </select>
 
       <label for="motion_detection">Motion Detection:</label>
-      <input 
+      <input
         type="checkbox"
         id="motion_detection"
         name="motion_detection"
@@ -97,28 +118,20 @@
       <button type="submit">Update Prefs</button>
     </form>
 
-    <!-- Кнопки керування -->
-    <div id="playback-controls" style="margin-bottom:1rem;">
-      <button onclick="controlMusic('pause')">Pause</button>
-      <button onclick="controlMusic('resume')">Resume</button>
-      <button onclick="controlMusic('next')">Next</button>
-      <button onclick="controlMusic('previous')">Previous</button>
-    </div>
+    <!-- Текстова інформація, яку можна сховати або показувати (стан, позиція) -->
+    <p style="display:none;">
+      State: <span id="playback-state">Stopped</span>
+      Position: <span id="playback-position">0 sec</span>
+    </p>
 
-    <!-- Інформація про трек -->
+    <!-- Поточна пісня -->
     <p>Title: <span id="current-song-title">N/A</span></p>
-    <p>State: <span id="playback-state">Stopped</span></p>
-    <p>Position: <span id="playback-position">0 sec</span></p>
 
-    <!-- Сердечко для дод/видалення -->
-    <button id="current-heart-btn" onclick="toggleFavoriteInPlayback()">
-      ♡
-    </button>
+    <!-- Кнопка-сердечко для поточного треку -->
+    <button id="current-heart-btn" onclick="toggleFavoriteInPlayback()">♡</button>
   </section>
 
-  <a href="/logout">Logout</a>
-
-  <!-- Socket.IO та main.js -->
+  <!-- Підключення Socket.IO та основного JS -->
   <script src="https://cdn.socket.io/4.5.4/socket.io.min.js" crossorigin="anonymous"></script>
   <script src="/static/js/main.js"></script>
 </body>

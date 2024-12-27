@@ -6,222 +6,192 @@ import logging
 import traceback
 from datetime import datetime, timezone
 
-playback_bp = Blueprint('playback', __name__)
 logger = logging.getLogger(__name__)
 
 class PlayCommandSchema(Schema):
     action = fields.String(
         required=True,
         validate=lambda x: x in [
-            "play", "pause", "resume", "next", "previous", 
+            "play", "pause", "resume", "next", "previous",
             "seek", "set_mode", "set_motion_detection"
         ]
     )
     video_id = fields.String(required=False)
-    position = fields.Integer(required=False)
-    mode = fields.String(required=False, validate=lambda x: x in ["repeat", "default", "shuffle"])
-    enabled = fields.Boolean(required=False)
-    # Додамо поля для реальних даних
     title = fields.String(required=False)
     thumbnail_url = fields.String(required=False)
     duration = fields.Integer(required=False)
+    position = fields.Float(required=False)    # Поточний момент треку
+    timestamp = fields.Integer(required=False) # Час на боці клієнта (мс)
+    mode = fields.String(required=False, validate=lambda x: x in ["repeat", "default", "shuffle"])
+    enabled = fields.Boolean(required=False)   # Для set_motion_detection
 
+play_command_schema = PlayCommandSchema()
+playback_bp = Blueprint('playback', __name__)
 
 @playback_bp.route("/api/playback", methods=["POST"])
 @token_required
 def handle_playback(current_user):
-    data = request.get_json()
     try:
-        validated_data = PlayCommandSchema().load(data)
-    except ValidationError as err:
-        return jsonify(err.messages), 400
+        data = request.get_json()
+        # Валідую вхідні дані через Marshmallow
+        validated_data = play_command_schema.load(data)
+        action = validated_data.get("action")
 
-    action = validated_data.get("action")
-    user_id = str(current_user["google_id"])
-    user_service: UserService = current_app.user_service
-    music_service = current_app.music_service  # Тепер доступний
-    pubnub_client = current_app.pubnub_client
-    user_doc = user_service.get_user_by_google_id(user_id)
+        # Поточний користувач
+        user_id = str(current_user["_id"])
+        google_id = current_user["google_id"]
 
-    try:
+        # Сервіси
+        user_service: UserService = current_app.user_service
+        pubnub_client = current_app.pubnub_client
+
+        # Збираємо параметри, що можуть прийти
+        video_id = validated_data.get("video_id")
+        title = validated_data.get("title", "Unknown Title")
+        thumbnail_url = validated_data.get("thumbnail_url", "")
+        duration = validated_data.get("duration", 0)
+        position = validated_data.get("position", 0.0)
+        timestamp = validated_data.get("timestamp", 0)
+        mode = validated_data.get("mode", "default")
+
         if action == "play":
-            video_id = validated_data.get("video_id")
+            # Перевірка
             if not video_id:
-                return jsonify({"error": "video_id is required for play action."}), 400
+                return jsonify({"error": "video_id is required for play action"}), 400
 
-            # Спробуємо отримати реальні дані з фронта або з music_service
-            client_title = validated_data.get("title", "")
-            thumbnail_url = validated_data.get("thumbnail_url", "")
-            duration = validated_data.get("duration", 0)
-            fetched_title = client_title or music_service.fetch_video_title(video_id) or "Unknown Title"
-
-            position = validated_data.get("position", 0)
-            mode = validated_data.get("mode", "default")
-            motion_det = user_doc.get("preferences", {}).get("motion_detection", True)
-
-            # Формуємо current_song
+            # Формуємо current_song для Mongo
             current_song = {
                 "video_id": video_id,
-                "title": fetched_title,
+                "title": title,
                 "thumbnail_url": thumbnail_url,
                 "duration": duration,
                 "position": position,
                 "state": "playing",
                 "mode": mode,
-                "motion_detected": motion_det,
+                "motion_detected": current_user.get("preferences", {}).get("motion_detection", True),
                 "updated_at": datetime.now(timezone.utc)
             }
-            user_service.update_current_playback(user_id, current_song)
+            # Оновлюємо current_playback
+            user_service.update_current_playback(google_id, current_song)
 
-            # Логуємо в історію
-            user_service.log_playback_history(user_id, video_id, fetched_title)
+            # Логування історії відтворення
+            user_service.log_playback_history(google_id, video_id, title)
 
-            # Публікуємо команду "play"
+            # Формуємо повідомлення PubNub
             command = {
                 "action": "play",
                 "video_id": video_id,
+                "title": title,
+                "thumbnail_url": thumbnail_url,
+                "duration": duration,
                 "position": position,
+                "timestamp": timestamp,
                 "mode": mode
             }
-            success = pubnub_client.publish_message(user_doc['channel_name_commands'], command)
-            if success:
-                logger.info(f"Play command sent for user {user_id}.")
-                return jsonify({"message": "Play command sent."}), 200
-            else:
-                return jsonify({"error": "Failed to send play command."}), 500
+            pubnub_client.publish_message(current_user["channel_name_commands"], command)
 
-        elif action in ["pause", "resume", "next", "previous"]:
-            state = "paused" if action == "pause" else "playing"
-            current_song_doc = user_service.get_current_playback(user_id)
-            if current_song_doc and current_song_doc.get("current_song"):
-                song_data = current_song_doc["current_song"]
-                song_data["state"] = state
-                song_data["updated_at"] = datetime.now(timezone.utc)
-                user_service.update_current_playback(user_id, song_data)
-            else:
-                # Якщо немає запису, створимо базовий
-                new_song = {
-                    "video_id": "",
-                    "title": "",
-                    "thumbnail_url": "",
-                    "duration": 0,
-                    "position": 0,
-                    "state": state,
-                    "mode": "default",
-                    "motion_detected": user_doc.get("preferences", {}).get("motion_detection", True),
-                    "updated_at": datetime.now(timezone.utc)
-                }
-                user_service.update_current_playback(user_id, new_song)
+            return jsonify({"message": "Play command sent."}), 200
 
-            cmd = {"action": action}
-            success = pubnub_client.publish_message(user_doc['channel_name_commands'], cmd)
-            if success:
-                logger.info(f"Action '{action}' sent for user {user_id}.")
-                return jsonify({"message": f"{action.capitalize()} command sent."}), 200
-            else:
-                return jsonify({"error": f"Failed to send {action} command."}), 500
+        elif action == "pause":
+            # Оновити state="paused", зберегти position
+            curr = user_service.get_current_playback(google_id)
+            if curr and "current_song" in curr:
+                song = curr["current_song"]
+                song["state"] = "paused"
+                song["position"] = position
+                song["updated_at"] = datetime.now(timezone.utc)
+                user_service.update_current_playback(google_id, song)
+
+            # Надсилаємо в PubNub
+            pubnub_client.publish_message(current_user["channel_name_commands"], {
+                "action": "pause",
+                "position": position,
+                "timestamp": timestamp
+            })
+            return jsonify({"message": "Pause command sent."}), 200
+
+        elif action == "resume":
+            curr = user_service.get_current_playback(google_id)
+            if curr and "current_song" in curr:
+                song = curr["current_song"]
+                song["state"] = "playing"
+                song["position"] = position
+                song["updated_at"] = datetime.now(timezone.utc)
+                user_service.update_current_playback(google_id, song)
+
+            pubnub_client.publish_message(current_user["channel_name_commands"], {
+                "action": "resume",
+                "position": position,
+                "timestamp": timestamp
+            })
+            return jsonify({"message": "Resume command sent."}), 200
+
+        elif action in ["next", "previous"]:
+            # Просто шлемо команду на Pi, Mongo не змінюємо
+            pubnub_client.publish_message(current_user["channel_name_commands"], {
+                "action": action
+            })
+            return jsonify({"message": f"{action.capitalize()} command sent."}), 200
 
         elif action == "seek":
-            position = validated_data.get("position")
-            if position is None:
-                return jsonify({"error": "position is required for seek action."}), 400
+            # Оновлюємо позицію
+            curr = user_service.get_current_playback(google_id)
+            if curr and "current_song" in curr:
+                song = curr["current_song"]
+                song["position"] = position
+                song["updated_at"] = datetime.now(timezone.utc)
+                user_service.update_current_playback(google_id, song)
 
-            cp_doc = user_service.get_current_playback(user_id)
-            if cp_doc and cp_doc.get("current_song"):
-                song_data = cp_doc["current_song"]
-                song_data["position"] = position
-                song_data["updated_at"] = datetime.now(timezone.utc)
-                user_service.update_current_playback(user_id, song_data)
-            else:
-                new_song = {
-                    "video_id": "",
-                    "title": "",
-                    "thumbnail_url": "",
-                    "duration": 0,
-                    "position": position,
-                    "state": "playing",
-                    "mode": "default",
-                    "motion_detected": user_doc.get("preferences", {}).get("motion_detection", True),
-                    "updated_at": datetime.now(timezone.utc)
-                }
-                user_service.update_current_playback(user_id, new_song)
-
-            cmd = {"action": "seek", "position": position}
-            success = pubnub_client.publish_message(user_doc['channel_name_commands'], cmd)
-            if success:
-                return jsonify({"message": "Seek command sent."}), 200
-            else:
-                return jsonify({"error": "Failed to send seek command."}), 500
+            pubnub_client.publish_message(current_user["channel_name_commands"], {
+                "action": "seek",
+                "position": position,
+                "timestamp": timestamp
+            })
+            return jsonify({"message": "Seek command sent."}), 200
 
         elif action == "set_mode":
-            mode = validated_data.get("mode")
-            if not mode:
-                return jsonify({"error": "mode is required for set_mode action."}), 400
+            # repeat / shuffle / default
+            curr = user_service.get_current_playback(google_id)
+            if curr and "current_song" in curr:
+                song = curr["current_song"]
+                song["mode"] = mode
+                song["updated_at"] = datetime.now(timezone.utc)
+                user_service.update_current_playback(google_id, song)
 
-            cp_doc = user_service.get_current_playback(user_id)
-            if cp_doc and cp_doc.get("current_song"):
-                song_data = cp_doc["current_song"]
-                song_data["mode"] = mode
-                song_data["updated_at"] = datetime.now(timezone.utc)
-                user_service.update_current_playback(user_id, song_data)
-            else:
-                new_song = {
-                    "video_id": "",
-                    "title": "",
-                    "thumbnail_url": "",
-                    "duration": 0,
-                    "position": 0,
-                    "state": "playing",
-                    "mode": mode,
-                    "motion_detected": user_doc.get("preferences", {}).get("motion_detection", True),
-                    "updated_at": datetime.now(timezone.utc)
-                }
-                user_service.update_current_playback(user_id, new_song)
-
-            cmd = {"action": "set_mode", "mode": mode}
-            success = pubnub_client.publish_message(user_doc['channel_name_commands'], cmd)
-            if success:
-                return jsonify({"message": "Set mode command sent."}), 200
-            else:
-                return jsonify({"error": "Failed to send set_mode command."}), 500
+            pubnub_client.publish_message(current_user["channel_name_commands"], {
+                "action": "set_mode",
+                "mode": mode
+            })
+            return jsonify({"message": f"Set mode to {mode}."}), 200
 
         elif action == "set_motion_detection":
-            enabled = validated_data.get("enabled")
-            if enabled is None:
-                return jsonify({"error": "enabled is required for set_motion_detection action."}), 400
+            # Припустимо, що enabled у схемі
+            enabled = validated_data.get("enabled", True)
 
-            preferences = user_doc.get("preferences", {})
-            preferences["motion_detection"] = enabled
-            user_service.save_preferences(user_id, preferences)
-            logger.info(f"Set motion_detection={enabled} for user {user_id}.")
+            # Оновлюємо preferences
+            prefs = current_user.get("preferences", {})
+            prefs["motion_detection"] = enabled
+            user_service.save_preferences(google_id, prefs)
 
-            cp_doc = user_service.get_current_playback(user_id)
-            if cp_doc and cp_doc.get("current_song"):
-                song_data = cp_doc["current_song"]
-                song_data["motion_detected"] = enabled
-                song_data["updated_at"] = datetime.now(timezone.utc)
-                user_service.update_current_playback(user_id, song_data)
-            else:
-                new_song = {
-                    "video_id": "",
-                    "title": "",
-                    "thumbnail_url": "",
-                    "duration": 0,
-                    "position": 0,
-                    "state": "playing",
-                    "mode": "default",
-                    "motion_detected": enabled,
-                    "updated_at": datetime.now(timezone.utc)
-                }
-                user_service.update_current_playback(user_id, new_song)
+            # Оновлюємо current_playback (якщо треба)
+            curr = user_service.get_current_playback(google_id)
+            if curr and "current_song" in curr:
+                song = curr["current_song"]
+                song["motion_detected"] = enabled
+                song["updated_at"] = datetime.now(timezone.utc)
+                user_service.update_current_playback(google_id, song)
 
-            cmd = {"action": "set_motion_detection", "enabled": enabled}
-            success = pubnub_client.publish_message(user_doc['channel_name_commands'], cmd)
-            if success:
-                return jsonify({"message": "Set motion_detection command sent."}), 200
-            else:
-                return jsonify({"error": "Failed to send set_motion_detection command."}), 500
+            pubnub_client.publish_message(current_user["channel_name_commands"], {
+                "action": "set_motion_detection",
+                "enabled": enabled
+            })
+            return jsonify({"message": f"Motion detection => {enabled}"}), 200
 
+        return jsonify({"error": "Invalid action."}), 400
+
+    except ValidationError as e:
+        logger.error(f"ValidationError: {e}")
+        return jsonify({"error": str(e)}), 400
     except Exception as e:
         logger.error(f"Error in handle_playback: {e}")
         logger.error(traceback.format_exc())

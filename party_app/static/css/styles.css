@@ -1,4 +1,4 @@
-/* 1. Скидання + базові стилі */
+/* 1. reset + base */
 *,
 *::before,
 *::after {
@@ -20,7 +20,7 @@ body {
   overflow-x: hidden;
 }
 
-/* Змінні */
+/* variables */
 :root {
   --color-primary: #8228ec;
   --color-secondary: #f626af;
@@ -29,10 +29,10 @@ body {
   --color-bg-hover: #2c2c3c;
   --border-radius: 8px;
   --transition-speed: 0.3s;
-  --playback-height: 180px; /* мінімальна висота pinned playback */
+  --playback-height: 200px;
 }
 
-/* Заголовки, кнопки */
+/* headings, buttons */
 h1, h2 {
   text-align: center;
 }
@@ -90,10 +90,11 @@ button:hover {
   margin: 0 0.25rem;
 }
 
-/* Search */
+/* Search + suggestions */
 #search-container {
+  margin: 1rem 0;
   text-align: center;
-  position: relative; 
+  position: relative;
 }
 #search {
   width: 90%;
@@ -103,9 +104,7 @@ button:hover {
   border: 1px solid #333;
   background: #111;
   color: #fff;
-  outline: none;
 }
-
 #autocomplete-suggestions {
   position: absolute;
   left: 50%;
@@ -117,6 +116,8 @@ button:hover {
   border-radius: var(--border-radius);
   z-index: 9999;
   list-style: none;
+  /* Показуємо поверх playback: */
+  box-shadow: 0 4px 6px rgba(0,0,0,0.5);
 }
 .suggestion-item {
   padding: 0.5rem;
@@ -131,6 +132,8 @@ button:hover {
   margin: 1rem auto;
   max-width: 900px;
   text-align: center;
+  /* щоб не ховалося під pinned playback */
+  margin-bottom: calc(var(--playback-height) + 50px);
 }
 .results-grid {
   display: flex;
@@ -159,7 +162,7 @@ button:hover {
   font-size: 0.9rem;
 }
 
-/* Current Playback pinned */
+/* pinned playback */
 #playback-status {
   position: fixed;
   bottom: 0;
@@ -168,12 +171,13 @@ button:hover {
   min-height: var(--playback-height);
   background-color: var(--color-bg-card);
   border-top: 3px solid var(--color-primary);
-  z-index: 9999;
+  z-index: 9998; /* трохи нижче 9999, щоб autocomplete було вище */
   padding: 1rem;
   text-align: center;
   overflow-y: auto;
 }
 
+/* heart icon */
 #current-heart-btn {
   position: absolute;
   top: 1rem;
@@ -189,6 +193,38 @@ button:hover {
   transform: scale(1.2);
 }
 
+/* Playback controls */
+#playback-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.playback-btn {
+  background: transparent;
+  color: #fff;
+  border: none;
+  font-size: 1.3rem;
+  padding: 0.2rem 0.5rem;
+  transition: color var(--transition-speed);
+}
+.playback-btn:hover {
+  color: var(--color-secondary);
+}
+
+/* Progress bar */
+#playback-progress-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+#playback-progress {
+  width: 60%;
+}
+
 /* Loading */
 #loading {
   margin-top: 1rem;
@@ -196,7 +232,7 @@ button:hover {
   font-weight: bold;
 }
 
-/* Media Queries */
+/* media queries */
 @media (min-width: 600px) {
   body {
     font-size: 16px;

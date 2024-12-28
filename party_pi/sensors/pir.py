@@ -1,3 +1,4 @@
+# sensors/pir.py
 import RPi.GPIO as GPIO
 import time
 
@@ -6,17 +7,17 @@ class PIRSensor:
         self.pin = pin
         GPIO.setmode(GPIO.BOARD)
         GPIO.setup(self.pin, GPIO.IN)
-    
+
     def is_triggered(self):
         return GPIO.input(self.pin) == GPIO.HIGH
-    
+
     def cleanup(self):
         GPIO.cleanup()
-        
+
 def monitor_pir(pir_sensor, callback_on_motion=None, callback_on_no_motion=None, no_motion_timeout=5):
     last_motion_time = time.time()
     motion_detected_last = False
-    
+
     while True:
         motion = pir_sensor.is_triggered()
         if motion:

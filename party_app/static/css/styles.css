@@ -1,4 +1,3 @@
-/* 1. reset + base */
 *,
 *::before,
 *::after {
@@ -29,7 +28,7 @@ body {
   --color-bg-hover: #2c2c3c;
   --border-radius: 8px;
   --transition-speed: 0.3s;
-  --playback-height: 200px;
+  --playback-height: 150px;
 }
 
 /* headings, buttons */
@@ -50,12 +49,103 @@ button:hover {
   transform: scale(1.02);
 }
 
-/* Lottie */    
-#lottie-container {
-  width: 200px;
-  height: 200px;
-  margin: 2rem auto;
+/* Top bar (profile menu) */
+#top-bar {
+  position: relative;
+  width: 100%;
+  height: 60px;
+  background: var(--color-bg-card);
+  border-bottom: 3px solid var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 0.5rem;
+  z-index: 9998;
 }
+
+.profile-menu {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+#profile-username {
+  font-weight: bold;
+  user-select: none;
+}
+
+.logo-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  user-select: none;
+}
+
+.profile-dropdown {
+  position: absolute;
+  top: 60px;
+  right: 0;
+  background: var(--color-bg-card);
+  border: 1px solid #333;
+  border-radius: var(--border-radius);
+  padding: 0.5rem;
+  display: none; /* схований за замовчуванням */
+  flex-direction: column;
+  min-width: 160px;
+  z-index: 9999;
+}
+
+/* Коли меню профілю має клас .open — показуємо блок */
+.profile-menu.open .profile-dropdown {
+  display: flex;
+}
+
+.profile-dropdown .pref-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+}
+
+.profile-dropdown #logout-btn {
+  display: inline-block;
+  color: #fff;
+  text-decoration: none;
+  background: var(--color-primary);
+  padding: 0.4rem 0.8rem;
+  border-radius: var(--border-radius);
+  transition: background var(--transition-speed), transform var(--transition-speed);
+}
+.profile-dropdown #logout-btn:hover {
+  background: var(--color-secondary);
+  transform: scale(1.02);
+}
+
+#lottie-container {
+  position: absolute;
+  top: 60px;
+  right: 0;
+  width: 100%;
+  max-width: 400px;
+  height: auto;
+  margin: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+#lottie-container-bottom {
+    position: fixed; /* Fixed для закріплення на екрані */
+    bottom: var(--playback-height); /* Відстань від нижньої межі */
+    left: 0;
+    width: 100%;
+    max-width: 400px;
+    height: auto;
+    transform: rotate(180deg); /* Поворот на 180 градусів */
+    pointer-events: none; /* Щоб не блокувати взаємодію */
+    z-index: 1; /* Найнижчий пріоритет серед інших елементів */
+  }  
 
 /* Favorites */
 #favorites-section {
@@ -90,14 +180,18 @@ button:hover {
   margin: 0 0.25rem;
 }
 
-/* Search + suggestions */
 #search-container {
   margin: 1rem 0;
   text-align: center;
   position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
 }
+
 #search {
-  width: 90%;
+  width: 30%;
   max-width: 400px;
   padding: 0.5rem;
   border-radius: var(--border-radius);
@@ -105,34 +199,38 @@ button:hover {
   background: #111;
   color: #fff;
 }
+
 #autocomplete-suggestions {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  width: 90%;
-  max-width: 400px;
+  width: 200px;
   background: #111;
-  border: 1px solid #333;
+  border: none; /* без рамки */
   border-radius: var(--border-radius);
-  z-index: 9999;
   list-style: none;
-  /* Показуємо поверх playback: */
   box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+  display: none; /* сховано за замовчуванням */
+  z-index: 9997;
 }
+
 .suggestion-item {
   padding: 0.5rem;
   cursor: pointer;
 }
+
 .suggestion-item:hover {
   background: var(--color-bg-hover);
 }
 
-/* Search Results */
+#autocomplete-suggestions.show {
+  display: block; 
+}
+
 #search-results {
   margin: 1rem auto;
   max-width: 900px;
   text-align: center;
-  /* щоб не ховалося під pinned playback */
   margin-bottom: calc(var(--playback-height) + 50px);
 }
 .results-grid {
@@ -141,6 +239,7 @@ button:hover {
   gap: 10px;
   padding: 0.5rem;
   justify-content: center;
+  z-index: 9996;
 }
 .result-card {
   background-color: var(--color-bg-card);
@@ -171,17 +270,55 @@ button:hover {
   min-height: var(--playback-height);
   background-color: var(--color-bg-card);
   border-top: 3px solid var(--color-primary);
-  z-index: 9998; /* трохи нижче 9999, щоб autocomplete було вище */
-  padding: 1rem;
+  padding: 0.5rem;
   text-align: center;
-  overflow-y: auto;
+  overflow: visible;
+  z-index: 9996;
 }
 
-/* heart icon */
+/* Playback controls */
+#playback-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+.playback-btn {
+  background: transparent;
+  color: #fff;
+  border: none;
+  font-size: 1.3rem;
+  padding: 0.2rem 0.5rem;
+  transition: color var(--transition-speed);
+}
+.playback-btn:hover {
+  color: var(--color-secondary);
+}
+
+#playback-progress-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  position: relative;
+  margin-top: 0.5rem;
+}
+
+#prog-start, #prog-end {
+  width: 40px;
+  text-align: center;
+}
+
+/* Прогрес-бар */
+#playback-progress {
+  width: 180px;
+  cursor: pointer;
+}
+
+/* Серце зліва */
 #current-heart-btn {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
+  position: static;
   background: transparent;
   color: var(--color-secondary);
   font-size: 1.5rem;
@@ -191,38 +328,93 @@ button:hover {
 }
 #current-heart-btn:hover {
   transform: scale(1.2);
+  color: var(--color-primary);
 }
 
-/* Playback controls */
-#playback-controls {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  margin-bottom: 1rem;
+/* Іконка звуку справа */
+.volume-icon {
+  font-size: 1.3rem;
+  cursor: pointer;
+  transition: transform var(--transition-speed);
+  user-select: none;
 }
-.playback-btn {
-  background: transparent;
-  color: #fff;
-  border: none;
-  font-size: 1.5rem;
-  padding: 0.2rem 0.5rem;
-  transition: color var(--transition-speed);
-}
-.playback-btn:hover {
+.volume-icon:hover {
   color: var(--color-secondary);
+  transform: scale(1.1);
 }
 
-/* Progress bar */
-#playback-progress-container {
-  display: flex;
+.volume-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+.volume-slider-container {
+  display: none;
+  position: absolute;
+  bottom: 130%; /* трохи вище іконки, щоб thumb не наїжджав */
+  left: calc(50% - 1px);
+  transform: translateX(-50%);
+  background: var(--color-bg-card);
+  padding: 0.125rem;
+  border-radius: var(--border-radius);
+  border: 1px solid #333;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  z-index: 9999;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.8);
 }
-#playback-progress {
-  width: 60%;
+  
+/* Коли показуємо */
+.volume-slider-container.show {
+  display: flex;
+}
+  
+/* Слайдер */
+#volume-slider {
+  width: 22px;   
+  height: 120px;
+  writing-mode: vertical-rl; 
+  transform: rotate(180deg);
+  background: transparent;
+  margin: 0 auto;
+  cursor: pointer;
+  appearance: none;
+}
+ 
+/* Прямокутна "кнопка" (thumb) */
+#volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; 
+  width: 22px;  
+  height: 8px;  
+  background: linear-gradient(to bottom, #f626af, #8228ec);
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  margin: 0;
+}
+  
+/* Трек */
+#volume-slider::-webkit-slider-runnable-track {
+  width: 100%;
+  background: #111;
+  border-radius: 8px;
+}
+ 
+/* Firefox */
+#volume-slider::-moz-range-thumb {
+  width: 22px;
+  height: 8px;
+  background: linear-gradient(to bottom, #f626af, #8228ec);
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+}
+#volume-slider::-moz-range-track {
+  background: #111;
+  border-radius: 8px;
+  width: 100%;
 }
 
 /* Loading */
@@ -232,35 +424,15 @@ button:hover {
   font-weight: bold;
 }
 
-/* Preferences container (нові стилі для блоку налаштувань) */
-#preferences-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1.5rem;
-  margin-bottom: 1rem;
-}
-.pref-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-.pref-icon {
-  font-size: 1.5rem;
-}
-/* Приклад ширини слайдера для гучності */
-#volume-slider {
-  width: 100px;
-}
-
 /* media queries */
-@media (min-width: 600px) {
-  body {
-    font-size: 16px;
+@media (max-width: 600px) {
+  #lottie-container {
+    width: 60%;
+    max-width: 250px;
   }
-}
-@media (min-width: 992px) {
-  body {
-    font-size: 18px;
+
+  #lottie-container-bottom {
+    width: 60%;
+    max-width: 150px;
   }
 }

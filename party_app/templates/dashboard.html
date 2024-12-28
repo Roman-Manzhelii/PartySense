@@ -9,18 +9,46 @@
 </head>
 <body>
 
-  <!-- Привітання та кнопка виходу -->
-  <h1>Welcome, {{ user }}!</h1>
-  <a href="/logout">Logout</a>
+  <!-- Меню профілю у правому верхньому куті -->
+  <header id="top-bar">
+    <div id="profile-menu" class="profile-menu">
+      <!-- Ім'я користувача -->
+      <span id="profile-username">{{ user }}</span>
+
+      <!-- Аватарка (іконка) -->
+      <img src="/static/img/logo.png" alt="" id="logo-icon" class="logo-icon">
+
+      <!-- Дропдаун, керується .open класом (у main.js) -->
+      <div id="profile-dropdown" class="profile-dropdown">
+        <!-- LED Mode -->
+        <div class="pref-item">
+          <span class="pref-icon">💡</span>
+          <select id="led-mode-select">
+            <option value="default" {% if preferences.led_mode == "default" %}selected{% endif %}>Default</option>
+            <option value="party"   {% if preferences.led_mode == "party"   %}selected{% endif %}>Party</option>
+            <option value="chill"   {% if preferences.led_mode == "chill"   %}selected{% endif %}>Chill</option>
+          </select>
+        </div>
+        <!-- Motion Detection -->
+        <div class="pref-item">
+          <span class="pref-icon">🚶</span>
+          <input
+            type="checkbox"
+            id="motion-detection-toggle"
+            {% if preferences.motion_detection %}checked{% endif %}
+          >
+        </div>
+        <!-- Кнопка Logout -->
+        <a href="/logout" id="logout-btn">Logout</a>
+      </div>
+    </div>
+  </header>
 
   <!-- Lottie.js для анімації -->
   <script
     src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.9.6/lottie.min.js"
     referrerpolicy="no-referrer">
   </script>
-  
-  <!-- Контейнер для Lottie-анімації -->
-  <div id="lottie-container"></div>
 
   <!-- Список улюблених -->
   <section id="favorites-section">
@@ -41,17 +69,15 @@
     </ul>
   </section>
 
-  <!-- Пошук -->
+  <!-- Пошук: в одному рядку input + button -->
   <div id="search-container">
-    <label for="search">Search:</label>
     <input
       type="text"
       id="search"
       placeholder="Enter song or artist"
       autocomplete="off"
     >
-    <button onclick="searchMusic()">Search</button>
-    <!-- Автодоповнення (autocomplete) -->
+    <button class="search-button" onclick="searchMusic()">Search</button>
     <ul id="autocomplete-suggestions"></ul>
   </div>
 
@@ -65,7 +91,7 @@
   <section id="playback-status">
     <h2><span id="current-song-title">N/A</span></h2>
 
-    <!-- Кнопки керування (новий UI) -->
+    <!-- Кнопки керування -->
     <div id="playback-controls">
       <button id="btn-shuffle" class="playback-btn">🔀</button>
       <button id="btn-prev" class="playback-btn">⏮</button>
@@ -74,60 +100,33 @@
       <button id="btn-repeat" class="playback-btn">🔁</button>
     </div>
 
-    <!-- Прогрес-бар: час програвання -->
+    <!-- Прогрес-бар + іконка звуку + серце -->
     <div id="playback-progress-container">
+      <button id="current-heart-btn" onclick="toggleFavoriteInPlayback()">♡</button>
+      
       <span id="prog-start">0:00</span>
       <input type="range" id="playback-progress" min="0" value="0" step="0.1">
       <span id="prog-end">3:59</span>
-    </div>
 
-    <!-- Блок налаштувань поза формою -->
-    <div id="preferences-container">
-      <!-- Гучність -->
-      <div class="pref-item">
-        <span class="pref-icon">🔊</span>
-        <input 
-          type="range"
-          id="volume-slider"
-          min="0"
-          max="100"
-          step="1"
-          value="{{ (preferences.volume * 100) | int }}"
-        >
-        <span id="volume-value">{{ (preferences.volume * 100) | int }}</span>
-      </div>
-
-      <!-- LED Mode -->
-      <div class="pref-item">
-        <span class="pref-icon">💡</span>
-        <select id="led-mode-select">
-          <option value="default" {% if preferences.led_mode == "default" %}selected{% endif %}>Default</option>
-          <option value="party"   {% if preferences.led_mode == "party"   %}selected{% endif %}>Party</option>
-          <option value="chill"   {% if preferences.led_mode == "chill"   %}selected{% endif %}>Chill</option>
-        </select>
-      </div>
-
-      <!-- Motion Detection -->
-      <div class="pref-item">
-        <span class="pref-icon">🚶</span>
-        <input 
-          type="checkbox"
-          id="motion-detection-toggle"
-          {% if preferences.motion_detection %}checked{% endif %}
-        >
+      <div class="volume-wrapper">
+        <span id="volume-icon" class="volume-icon">🔊</span>
+        <div id="volume-slider-container" class="volume-slider-container">
+          <input
+            type="range"
+            id="volume-slider"
+            min="0"
+            max="100"
+            step="1"
+            value="{{ (preferences.volume * 100) | int }}"
+          >
+        </div>
       </div>
     </div>
-
-    <!-- Текстова інформація, яку можна сховати або показувати (стан, позиція) -->
-    <p style="display:none;">
-      State: <span id="playback-state">Stopped</span>
-      Position: <span id="playback-position">0 sec</span>
-    </p>
-
-    <!-- Кнопка-сердечко для поточного треку -->
-    <button id="current-heart-btn" onclick="toggleFavoriteInPlayback()">♡</button>
   </section>
 
+  <div id="lottie-container"></div>
+  <div id="lottie-container-bottom"></div>
+  
   <!-- Підключення Socket.IO та основного JS -->
   <script src="https://cdn.socket.io/4.5.4/socket.io.min.js" crossorigin="anonymous"></script>
   <script src="/static/js/main.js"></script>

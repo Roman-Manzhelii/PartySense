@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>PartySense</title>
-  <!-- Підключення наших стилів -->
   <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
@@ -12,15 +11,9 @@
   <!-- Меню профілю у правому верхньому куті -->
   <header id="top-bar">
     <div id="profile-menu" class="profile-menu">
-      <!-- Ім'я користувача -->
       <span id="profile-username">{{ user }}</span>
-
-      <!-- Аватарка (іконка) -->
       <img src="/static/img/logo.png" alt="" id="logo-icon" class="logo-icon">
-
-      <!-- Дропдаун, керується .open класом (у main.js) -->
       <div id="profile-dropdown" class="profile-dropdown">
-        <!-- LED Mode -->
         <div class="pref-item">
           <span class="pref-icon">💡</span>
           <select id="led-mode-select">
@@ -29,7 +22,6 @@
             <option value="chill"   {% if preferences.led_mode == "chill"   %}selected{% endif %}>Chill</option>
           </select>
         </div>
-        <!-- Motion Detection -->
         <div class="pref-item">
           <span class="pref-icon">🚶</span>
           <input
@@ -38,7 +30,6 @@
             {% if preferences.motion_detection %}checked{% endif %}
           >
         </div>
-        <!-- Кнопка Logout -->
         <a href="/logout" id="logout-btn">Logout</a>
       </div>
     </div>
@@ -69,14 +60,9 @@
     </ul>
   </section>
 
-  <!-- Пошук: в одному рядку input + button -->
+  <!-- Пошук -->
   <div id="search-container">
-    <input
-      type="text"
-      id="search"
-      placeholder="Enter song or artist"
-      autocomplete="off"
-    >
+    <input type="text" id="search" placeholder="Enter song or artist" autocomplete="off">
     <button class="search-button" onclick="searchMusic()">Search</button>
     <ul id="autocomplete-suggestions"></ul>
   </div>
@@ -87,11 +73,10 @@
     <div id="loading" style="display:none;">Loading...</div>
   </div>
 
-  <!-- Закріплений внизу екрану блок Current Playback -->
+  <!-- Програвач -->
   <section id="playback-status">
     <h2><span id="current-song-title">N/A</span></h2>
 
-    <!-- Кнопки керування -->
     <div id="playback-controls">
       <button id="btn-shuffle" class="playback-btn">🔀</button>
       <button id="btn-prev" class="playback-btn">⏮</button>
@@ -100,13 +85,13 @@
       <button id="btn-repeat" class="playback-btn">🔁</button>
     </div>
 
-    <!-- Прогрес-бар + іконка звуку + серце -->
     <div id="playback-progress-container">
       <button id="current-heart-btn" onclick="toggleFavoriteInPlayback()">♡</button>
-      
+
+      <!-- Початкові значення 0:00 -->
       <span id="prog-start">0:00</span>
       <input type="range" id="playback-progress" min="0" value="0" step="0.1">
-      <span id="prog-end">3:59</span>
+      <span id="prog-end">0:00</span>
 
       <div class="volume-wrapper">
         <span id="volume-icon" class="volume-icon">🔊</span>
@@ -126,8 +111,8 @@
 
   <div id="lottie-container"></div>
   <div id="lottie-container-bottom"></div>
-  
-  <!-- Підключення Socket.IO та основного JS -->
+
+  <!-- Socket.IO + JS -->
   <script src="https://cdn.socket.io/4.5.4/socket.io.min.js" crossorigin="anonymous"></script>
   <script src="/static/js/main.js"></script>
 </body>

@@ -6,6 +6,8 @@ import logging
 import traceback
 from datetime import datetime, timezone
 
+from youtube_api import get_video_details
+
 logger = logging.getLogger(__name__)
 
 class PlayCommandSchema(Schema):
@@ -20,10 +22,10 @@ class PlayCommandSchema(Schema):
     title = fields.String(required=False)
     thumbnail_url = fields.String(required=False)
     duration = fields.Integer(required=False)
-    position = fields.Float(required=False)    # Поточний момент треку
-    timestamp = fields.Integer(required=False) # Час на боці клієнта (мс)
+    position = fields.Float(required=False)
+    timestamp = fields.Integer(required=False)
     mode = fields.String(required=False, validate=lambda x: x in ["repeat", "default", "shuffle"])
-    enabled = fields.Boolean(required=False)   # Для set_motion_detection
+    enabled = fields.Boolean(required=False)
 
 play_command_schema = PlayCommandSchema()
 playback_bp = Blueprint('playback', __name__)
@@ -33,67 +35,66 @@ playback_bp = Blueprint('playback', __name__)
 def handle_playback(current_user):
     try:
         data = request.get_json()
-        # Валідую вхідні дані через Marshmallow
         validated_data = play_command_schema.load(data)
         action = validated_data.get("action")
 
-        # Поточний користувач
-        user_id = str(current_user["_id"])
-        google_id = current_user["google_id"]
-
-        # Сервіси
         user_service: UserService = current_app.user_service
         pubnub_client = current_app.pubnub_client
+        google_id = current_user["google_id"]
 
-        # Збираємо параметри, що можуть прийти
         video_id = validated_data.get("video_id")
-        title = validated_data.get("title", "Unknown Title")
-        thumbnail_url = validated_data.get("thumbnail_url", "")
-        duration = validated_data.get("duration", 0)
+        fallback_title = validated_data.get("title", "Unknown Title")
+        fallback_thumb = validated_data.get("thumbnail_url", "")
+        fallback_duration = validated_data.get("duration", 0)
         position = validated_data.get("position", 0.0)
         timestamp = validated_data.get("timestamp", 0)
         mode = validated_data.get("mode", "default")
 
         if action == "play":
-            # Перевірка
             if not video_id:
                 return jsonify({"error": "video_id is required for play action"}), 400
 
-            # Формуємо current_song для Mongo
+            # 1) Запитуємо реальні дані
+            details = get_video_details(video_id)
+            if details:
+                actual_title = details["title"] or fallback_title
+                actual_thumb = details["thumbnail_url"] or fallback_thumb
+                actual_duration = details["duration_seconds"] or fallback_duration
+            else:
+                actual_title = fallback_title
+                actual_thumb = fallback_thumb
+                actual_duration = fallback_duration
+
+            # 2) Зберігаємо у current_playback
             current_song = {
                 "video_id": video_id,
-                "title": title,
-                "thumbnail_url": thumbnail_url,
-                "duration": duration,
+                "title": actual_title,
+                "thumbnail_url": actual_thumb,
+                "duration": actual_duration,
                 "position": position,
                 "state": "playing",
                 "mode": mode,
                 "motion_detected": current_user.get("preferences", {}).get("motion_detection", True),
                 "updated_at": datetime.now(timezone.utc)
             }
-            # Оновлюємо current_playback
             user_service.update_current_playback(google_id, current_song)
+            user_service.log_playback_history(google_id, video_id, actual_title)
 
-            # Логування історії відтворення
-            user_service.log_playback_history(google_id, video_id, title)
-
-            # Формуємо повідомлення PubNub
+            # 3) Публікуємо команду в PubNub
             command = {
                 "action": "play",
                 "video_id": video_id,
-                "title": title,
-                "thumbnail_url": thumbnail_url,
-                "duration": duration,
+                "title": actual_title,
+                "thumbnail_url": actual_thumb,
+                "duration": actual_duration,
                 "position": position,
                 "timestamp": timestamp,
                 "mode": mode
             }
             pubnub_client.publish_message(current_user["channel_name_commands"], command)
-
             return jsonify({"message": "Play command sent."}), 200
 
         elif action == "pause":
-            # Оновити state="paused", зберегти position
             curr = user_service.get_current_playback(google_id)
             if curr and "current_song" in curr:
                 song = curr["current_song"]
@@ -102,7 +103,6 @@ def handle_playback(current_user):
                 song["updated_at"] = datetime.now(timezone.utc)
                 user_service.update_current_playback(google_id, song)
 
-            # Надсилаємо в PubNub
             pubnub_client.publish_message(current_user["channel_name_commands"], {
                 "action": "pause",
                 "position": position,
@@ -127,14 +127,12 @@ def handle_playback(current_user):
             return jsonify({"message": "Resume command sent."}), 200
 
         elif action in ["next", "previous"]:
-            # Просто шлемо команду на Pi, Mongo не змінюємо
             pubnub_client.publish_message(current_user["channel_name_commands"], {
                 "action": action
             })
             return jsonify({"message": f"{action.capitalize()} command sent."}), 200
 
         elif action == "seek":
-            # Оновлюємо позицію
             curr = user_service.get_current_playback(google_id)
             if curr and "current_song" in curr:
                 song = curr["current_song"]
@@ -150,7 +148,6 @@ def handle_playback(current_user):
             return jsonify({"message": "Seek command sent."}), 200
 
         elif action == "set_mode":
-            # repeat / shuffle / default
             curr = user_service.get_current_playback(google_id)
             if curr and "current_song" in curr:
                 song = curr["current_song"]
@@ -165,15 +162,11 @@ def handle_playback(current_user):
             return jsonify({"message": f"Set mode to {mode}."}), 200
 
         elif action == "set_motion_detection":
-            # Припустимо, що enabled у схемі
             enabled = validated_data.get("enabled", True)
-
-            # Оновлюємо preferences
             prefs = current_user.get("preferences", {})
             prefs["motion_detection"] = enabled
             user_service.save_preferences(google_id, prefs)
 
-            # Оновлюємо current_playback (якщо треба)
             curr = user_service.get_current_playback(google_id)
             if curr and "current_song" in curr:
                 song = curr["current_song"]

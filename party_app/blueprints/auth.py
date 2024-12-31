@@ -54,8 +54,8 @@ def authorized():
             # Створюємо нового юзера
             channel_name_commands = f"user_{google_id}_commands"
             channel_name_status = f"user_{google_id}_status"
-            token_commands, expiration_commands = pubnub_client.generate_token([channel_name_commands], ttl=60)
-            token_status, expiration_status = pubnub_client.generate_token([channel_name_status], ttl=60)
+            token_commands, expiration_commands = pubnub_client.generate_token([channel_name_commands], ttl=3600)
+            token_status, expiration_status = pubnub_client.generate_token([channel_name_status], ttl=3600)
 
             if not token_commands or not token_status:
                 logger.error("Failed to generate PubNub tokens.")

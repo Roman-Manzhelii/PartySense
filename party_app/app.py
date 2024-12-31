@@ -3,6 +3,7 @@ from flask_socketio import SocketIO
 import os
 from dotenv import load_dotenv
 import logging
+from datetime import datetime, timedelta, timezone
 
 load_dotenv()
 
@@ -57,6 +58,11 @@ app.register_blueprint(categories_bp)
 app.register_blueprint(playback_bp)
 app.register_blueprint(preferences_bp)
 
+# Кеш для зберігання останнього стану відтворення кожного користувача
+last_playback_states = {}
+# Кеш для зберігання часу останнього оновлення
+last_update_times = {}
+
 def handle_status_update(message):
     try:
         user_id = message.get("user_id")
@@ -65,11 +71,39 @@ def handle_status_update(message):
             logger.error("Invalid status message received.")
             return
 
-        app.user_service.update_current_playback(str(user_id), current_song)
-        logger.info(f"Updated current_playback for user {user_id}.")
+        now = datetime.now(timezone.utc)
+        last_state = last_playback_states.get(user_id)
+        last_update = last_update_times.get(user_id, now - timedelta(seconds=10))
 
-        socketio.emit('playback_update', {'user_id': user_id, 'current_song': current_song}, broadcast=True)
-        logger.info(f"Emitted playback_update for user {user_id}.")
+        # Перевірка, чи змінився стан відтворення
+        if last_state != current_song:
+            state_changed = False
+            if last_state is None:
+                state_changed = True
+            else:
+                # Порівнюємо окремі поля
+                for key in ["video_id", "title", "state", "position", "mode", "motion_detected"]:
+                    if last_state.get(key) != current_song.get(key):
+                        state_changed = True
+                        break
+
+            # Перевірка часу останнього оновлення
+            if state_changed and (now - last_update) >= timedelta(seconds=1):
+                # Оновлюємо кеш
+                last_playback_states[user_id] = current_song
+                last_update_times[user_id] = now
+
+                # Оновлюємо поточне відтворення у базі даних
+                app.user_service.update_current_playback(str(user_id), current_song)
+                logger.info(f"Updated current_playback for user {user_id}.")
+
+                # Емітуємо оновлення через Socket.IO
+                socketio.emit('playback_update', {'user_id': user_id, 'current_song': current_song}, broadcast=True)
+                logger.info(f"Emitted playback_update for user {user_id}.")
+            else:
+                logger.debug(f"Update for user {user_id} skipped due to frequency limit.")
+        else:
+            logger.debug(f"No significant change in playback state for user {user_id}. Skipping emission.")
     except Exception as e:
         logger.error(f"Error handling status update: {e}")
 

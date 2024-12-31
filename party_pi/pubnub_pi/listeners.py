@@ -1,4 +1,4 @@
-# pubnub/listeners.py
+# pubnub_pi/listeners.py
 from pubnub.callbacks import SubscribeCallback
 from pubnub.models.consumer.pubsub import PNMessageResult
 
@@ -22,10 +22,11 @@ class CommandListener(SubscribeCallback):
         if action == "play":
             duration = msg.get("duration", 0)
             position = msg.get("position", 0)
-            video_id = msg.get("video_id", "dummy_video_id")
+            video_id = msg.get("video_id", "unknown")
             title = msg.get("title", "Unknown Title")
+            thumbnail_url = msg.get("thumbnail_url", "")
             # Завантажуємо трек
-            self.player.load_track(duration)
+            self.player.load_track(duration, video_id=video_id, title=title, thumbnail_url=thumbnail_url)
             self.player.seek(position)
             self.player.play()
             print(f"[CommandListener] Playing '{title}' (Video ID: {video_id}) from position {position}s")

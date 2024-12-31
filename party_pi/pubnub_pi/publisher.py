@@ -1,7 +1,6 @@
-# pubnub/publisher.py
+# pubnub_pi/publisher.py
 from pubnub.pubnub import PubNub
 from pubnub.exceptions import PubNubException
-from pubnub.models.consumer.pubsub import PNPublishResult
 from pubnub_pi.pubnub_config import get_pubnub_config
 
 class PubNubPublisher:

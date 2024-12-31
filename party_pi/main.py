@@ -1,6 +1,7 @@
 import os
 import time
 import threading
+from pathlib import Path 
 
 from pymongo import MongoClient
 from dotenv import load_dotenv
@@ -11,17 +12,18 @@ from sensors.pir import PIRSensor
 from player.player import Player
 from pubnub_pi.listeners import CommandListener
 from pubnub_pi.subscriber import PubNubSubscriber
-from pubnub_pi.status_publisher import StatusPublisher
+from pubnub_pi.publisher import PubNubPublisher
 
-load_dotenv()
+env_path = Path(__file__).parent / '.env'
+load_dotenv(dotenv_path=env_path)
 
-# Зчитуємо змінні середовища
-GOOGLE_ID = os.getenv("GOOGLE_ID")  # "114379767835747196870"
-MONGO_URI = os.getenv("MONGO_URI")
+
+GOOGLE_ID = os.getenv("GOOGLE_ID")
+MONGODB_URI = os.getenv("MONGODB_URI")
 
 def fetch_channel_data_from_db(google_id):
     try:
-        client = MongoClient(MONGO_URI)
+        client = MongoClient(MONGODB_URI)
         db = client["party_sense_db"]
         user = db["users"].find_one({"google_id": google_id})
 
@@ -62,16 +64,37 @@ def main():
         print("[main] Incomplete channel data retrieved from MongoDB. Exiting.")
         return
 
+    # Створюємо Publisher для статусу
+    status_publisher = PubNubPublisher(channel_name_status)
+
+    # Callback для публікації статусу
+    def publish_status():
+        song_state = player.get_current_state()
+        message = {
+            "user_id": GOOGLE_ID,
+            "current_song": {
+                "video_id": song_state.get("video_id", "unknown"),
+                "title": song_state.get("title", "Unknown Title"),
+                "thumbnail_url": song_state.get("thumbnail_url", ""),
+                "duration": song_state.get("duration", 0),
+                "position": song_state.get("position", 0),
+                "state": song_state.get("state", "paused"),
+                "mode": song_state.get("mode", "default"),
+                "motion_detected": song_state.get("motion_detected", True),
+                "updated_at": song_state.get("updated_at", time.time())
+            }
+        }
+        status_publisher.publish_message(message)
+
+    # Передаємо callback у Player
+    player.on_update_callback = publish_status
+
     # Створюємо Listener для команд
     command_listener = CommandListener(player, led_ring)
 
     # Створюємо і запускаємо PubNub Subscriber для команд
     subscriber = PubNubSubscriber(channel_name_commands, command_listener)
     subscriber.start_listening()
-
-    # Створюємо і запускаємо Status Publisher для статусу
-    status_publisher = StatusPublisher(channel_name_status, player, GOOGLE_ID)
-    status_publisher.start()
 
     # Запускаємо фоновий Player
     player.start_background()
@@ -87,7 +110,6 @@ def main():
         # Зупиняємо всі компоненти
         player.stop_background()
         subscriber.stop_listening()
-        status_publisher.stop()
         pir_sensor.cleanup()
         led_ring.turn_off()
         print("[main] Shutdown complete.")

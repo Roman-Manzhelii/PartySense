@@ -6,6 +6,7 @@ const API = {
   FAVORITES: "/api/favorites",
   CATEGORIES: "/api/categories",
   PLAYBACK: "/api/playback",
+  CURRENT_PLAYBACK: "/api/current_playback",
   PREFERENCES: "/api/preferences"
 };
 
@@ -50,6 +51,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initProfileMenuUI();
   initVolumeUI();
   initProfileDropdownToggle();
+  fetchCurrentPlayback();
 });
 
 /* ========== 1. Lottie ========== */
@@ -556,11 +558,25 @@ function updatePlaybackUI(data) {
 
 function updateCurrentPlaybackUI(songData, state, pos) {
   const titleEl = document.getElementById("current-song-title");
-  if (titleEl) titleEl.textContent = songData.title || "Unknown";
+  if (titleEl) {
+    if (songData) {
+      titleEl.textContent = songData.title || "Unknown";
+    } else {
+      titleEl.textContent = "N/A";
+    }
+  }
 
-  currentDuration = songData.duration || 0;
-  currentPosition = pos || 0;
-  currentPlayingState = state;
+  if (songData) {
+    currentDuration = songData.duration || 0;
+    currentPosition = pos || 0;
+    currentPlayingState = state || "paused";
+    window.currentVideoId = songData.video_id;
+  } else {
+    currentDuration = 0;
+    currentPosition = 0;
+    currentPlayingState = "paused";
+    window.currentVideoId = null;
+  }
 
   const slider = document.getElementById("playback-progress");
   if (slider) {
@@ -577,15 +593,18 @@ function updateCurrentPlaybackUI(songData, state, pos) {
     progEnd.textContent = secondsToHMS(currentDuration);
   }
 
-  window.currentVideoId = songData.video_id;
-
   const heartBtn = document.getElementById("current-heart-btn");
-  if (heartBtn) heartBtn.textContent = "♡";
-  checkIfFavorite(songData.video_id);
+  if (heartBtn) {
+    heartBtn.textContent = "♡";
+  }
+
+  if (songData) {
+    checkIfFavorite(songData.video_id);
+  }
 
   const playPauseBtn = document.getElementById("btn-play-pause");
   if (playPauseBtn) {
-    playPauseBtn.textContent = (state === "playing") ? "⏸" : "▶";
+    playPauseBtn.textContent = (currentPlayingState === "playing") ? "⏸" : "▶";
   }
 }
 
@@ -612,6 +631,23 @@ function initProfileMenuUI() {
       debouncedPrefsUpdate({ motion_detection: motionToggle.checked });
     });
   }
+}
+
+function fetchCurrentPlayback() {
+  fetch(API.CURRENT_PLAYBACK, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.current_song) {
+        updatePlaybackUI(data);
+      } else {
+        // Оновлюємо UI для відображення "N/A"
+        updatePlaybackUI({ current_song: null });
+      }
+    })
+    .catch(err => console.error("fetchCurrentPlayback error:", err));
 }
 
 /* Dropdown toggle */

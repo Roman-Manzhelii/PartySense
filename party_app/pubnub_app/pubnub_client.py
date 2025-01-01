@@ -1,7 +1,6 @@
 # pubnub_client.py
 import logging
 from pubnub.pubnub import PubNub
-from pubnub.pnconfiguration import PNConfiguration
 from pubnub.callbacks import SubscribeCallback
 from pubnub.exceptions import PubNubException
 from pubnub.models.consumer.pubsub import PNMessageResult
@@ -14,9 +13,12 @@ logging.basicConfig(level=logging.DEBUG)  # Змінили на DEBUG для д�
 logger = logging.getLogger(__name__)
 
 class PubNubClient:
-    def __init__(self):
+    def __init__(self, message_callback):
         self.config = get_pubnub_config()
         self.pubnub = PubNub(self.config)
+        self.message_callback = message_callback
+        self.listener = StatusListener(self.message_callback)
+        self.pubnub.add_listener(self.listener)
         logger.info("PubNubClient initialized with configuration:")
         logger.debug(f"Subscribe Key: {self.config.subscribe_key}")
         logger.debug(f"Publish Key: {self.config.publish_key}")
@@ -27,7 +29,7 @@ class PubNubClient:
         try:
             channels_list = [Channel(ch).read().write() for ch in channels]
             logger.debug(f"Generating token for channels: {[c.id for c in channels_list]} with TTL: {ttl} seconds")
-            envelope = self.pubnub.access_manager().grant_token().channels(channels_list).ttl(ttl).sync()
+            envelope = self.pubnub.grant_token().channels(channels_list).ttl(ttl).sync()
             token = envelope.result.token
             expiration_time = datetime.now(timezone.utc) + timedelta(seconds=ttl)
 
@@ -73,17 +75,17 @@ class PubNubClient:
             logger.error(f"Unexpected error during publish to {channel}: {e}")
             return False
 
-    def subscribe_to_status_channel(self, user_id, callback):
-        channel = f"user_{user_id}_status"
-        logger.info(f"Attempting to subscribe to status channel: {channel}")
+    def subscribe_to_channels(self, channels):
+        # Subscribe to multiple channels at once
+        channel_names = [f"user_{user_id}_status" for user_id in channels]
+        logger.info(f"Subscribing to channels: {channel_names}")
         try:
-            self.pubnub.add_listener(StatusListener(callback))
-            self.pubnub.subscribe().channels([channel]).execute()
-            logger.info(f"Successfully subscribed to status channel: {channel}")
+            self.pubnub.subscribe().channels(channel_names).execute()
+            logger.info(f"Successfully subscribed to channels: {channel_names}")
         except PubNubException as e:
-            logger.error(f"PubNubException during subscription to {channel}: {e}")
+            logger.error(f"PubNubException during subscription to channels {channel_names}: {e}")
         except Exception as e:
-            logger.error(f"Unexpected error during subscription to {channel}: {e}")
+            logger.error(f"Unexpected error during subscription to channels {channel_names}: {e}")
 
 class StatusListener(SubscribeCallback):
     def __init__(self, callback):

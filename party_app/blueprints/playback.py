@@ -189,3 +189,20 @@ def handle_playback(current_user):
         logger.error(f"Error in handle_playback: {e}")
         logger.error(traceback.format_exc())
         return jsonify({'error': 'Internal server error'}), 500
+    
+
+@playback_bp.route("/api/current_playback", methods=["GET"])
+@token_required
+def get_current_playback_route(current_user):
+    try:
+        google_id = current_user["google_id"]
+        user_service: UserService = current_app.user_service
+        current_playback = user_service.get_current_playback(google_id)
+        if current_playback and "current_song" in current_playback:
+            return jsonify({"current_song": current_playback["current_song"]}), 200
+        else:
+            return jsonify({"current_song": None}), 200
+    except Exception as e:
+        logger.error(f"Error in get_current_playback_route: {e}")
+        logger.error(traceback.format_exc())
+        return jsonify({'error': 'Internal server error'}), 500    

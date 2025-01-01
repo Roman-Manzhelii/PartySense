@@ -1,3 +1,4 @@
+# app.py
 from flask import Flask, session, render_template, request, redirect
 from flask_socketio import SocketIO
 import os
@@ -26,43 +27,12 @@ app.config.update(
 
 socketio = SocketIO(app)
 
-# PubNub
-pubnub_client = PubNubClient()
-app.pubnub_client = pubnub_client
-
-# Сервіси
-music_service = MusicService()
-app.music_service = music_service
-
-search_service = SearchService()
-
-user_service = UserService(pubnub_client)
-app.user_service = user_service
-
-# Імпортуємо Blueprint'и
-from blueprints.auth import auth_bp
-from blueprints.music import music_bp
-from blueprints.search import search_bp
-from blueprints.playlists import playlists_bp
-from blueprints.favorites import favorites_bp
-from blueprints.categories import categories_bp
-from blueprints.playback import playback_bp
-from blueprints.preferences import preferences_bp
-
-app.register_blueprint(auth_bp)
-app.register_blueprint(music_bp)
-app.register_blueprint(search_bp)
-app.register_blueprint(playlists_bp)
-app.register_blueprint(favorites_bp)
-app.register_blueprint(categories_bp)
-app.register_blueprint(playback_bp)
-app.register_blueprint(preferences_bp)
-
 # Кеш для зберігання останнього стану відтворення кожного користувача
 last_playback_states = {}
 # Кеш для зберігання часу останнього оновлення
 last_update_times = {}
 
+# Function to handle status updates
 def handle_status_update(message):
     try:
         user_id = message.get("user_id")
@@ -75,7 +45,7 @@ def handle_status_update(message):
         last_state = last_playback_states.get(user_id)
         last_update = last_update_times.get(user_id, now - timedelta(seconds=10))
 
-        # Перевірка, чи змінився стан відтворення
+        # Перевірка змін стану
         if last_state != current_song:
             state_changed = False
             if last_state is None:
@@ -98,7 +68,7 @@ def handle_status_update(message):
                 logger.info(f"Updated current_playback for user {user_id}.")
 
                 # Емітуємо оновлення через Socket.IO
-                socketio.emit('playback_update', {'user_id': user_id, 'current_song': current_song}, broadcast=True)
+                socketio.emit('playback_update', {'user_id': user_id, 'current_song': current_song})
                 logger.info(f"Emitted playback_update for user {user_id}.")
             else:
                 logger.debug(f"Update for user {user_id} skipped due to frequency limit.")
@@ -106,6 +76,39 @@ def handle_status_update(message):
             logger.debug(f"No significant change in playback state for user {user_id}. Skipping emission.")
     except Exception as e:
         logger.error(f"Error handling status update: {e}")
+
+# Ініціалізація PubNubClient з колбеком
+pubnub_client = PubNubClient(handle_status_update)
+app.pubnub_client = pubnub_client
+
+# Ініціалізація UserService з PubNubClient
+user_service = UserService(pubnub_client)
+app.user_service = user_service
+
+# Ініціалізація інших сервісів
+music_service = MusicService()
+app.music_service = music_service
+
+search_service = SearchService()
+
+# Імпортуємо Blueprint'и
+from blueprints.auth import auth_bp
+from blueprints.music import music_bp
+from blueprints.search import search_bp
+from blueprints.playlists import playlists_bp
+from blueprints.favorites import favorites_bp
+from blueprints.categories import categories_bp
+from blueprints.playback import playback_bp
+from blueprints.preferences import preferences_bp
+
+app.register_blueprint(auth_bp)
+app.register_blueprint(music_bp)
+app.register_blueprint(search_bp)
+app.register_blueprint(playlists_bp)
+app.register_blueprint(favorites_bp)
+app.register_blueprint(categories_bp)
+app.register_blueprint(playback_bp)
+app.register_blueprint(preferences_bp)
 
 @app.route("/", methods=["GET", "POST"])
 @token_required
@@ -169,9 +172,8 @@ if __name__ == "__main__":
 
     with app.app_context():
         users = app.user_service.get_all_users()
-        for user in users:
-            gid = user["google_id"]
-            pubnub_client.subscribe_to_status_channel(gid, handle_status_update)
+        user_ids = [user["google_id"] for user in users]
+        pubnub_client.subscribe_to_channels(user_ids)
         logger.info("Subscribed to all existing users' status channels.")
 
-    socketio.run(app, host="localhost", port=5000, debug=True)
+    socketio.run(app, host="localhost", port=5000)

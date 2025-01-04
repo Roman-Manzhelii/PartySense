@@ -8,8 +8,7 @@ from pubnub.models.consumer.v3.channel import Channel
 from datetime import datetime, timezone, timedelta
 from pubnub_app.pubnub_config import get_pubnub_config
 
-# Налаштування логування
-logging.basicConfig(level=logging.DEBUG)  # Змінили на DEBUG для детальнішого логування
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 class PubNubClient:
@@ -19,11 +18,6 @@ class PubNubClient:
         self.message_callback = message_callback
         self.listener = StatusListener(self.message_callback)
         self.pubnub.add_listener(self.listener)
-        logger.info("PubNubClient initialized with configuration:")
-        logger.debug(f"Subscribe Key: {self.config.subscribe_key}")
-        logger.debug(f"Publish Key: {self.config.publish_key}")
-        logger.debug(f"Secret Key: {self.config.secret_key}")
-        logger.debug(f"UUID: {self.config.uuid}")
 
     def generate_token(self, channels, ttl=3600):
         try:
@@ -76,7 +70,6 @@ class PubNubClient:
             return False
 
     def subscribe_to_channels(self, channels):
-        # Subscribe to multiple channels at once
         channel_names = [f"user_{user_id}_status" for user_id in channels]
         logger.info(f"Subscribing to channels: {channel_names}")
         try:
@@ -101,7 +94,3 @@ class StatusListener(SubscribeCallback):
     def message(self, pubnub, message: PNMessageResult):
         logger.info(f"Message received on channel {message.channel}: {message.message}")
         self.callback(message.message)
-
-    def presence(self, pubnub, presence):
-        # Необхідно реалізувати, якщо потрібно
-        pass

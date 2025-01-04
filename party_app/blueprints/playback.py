@@ -92,6 +92,7 @@ def handle_playback(current_user):
                 "mode": mode
             }
             pubnub_client.publish_message(current_user["channel_name_commands"], command)
+            logger.info(f"Published play command: {command}")
             return jsonify({"message": "Play command sent."}), 200
 
         elif action == "pause":

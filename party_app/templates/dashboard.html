@@ -1,3 +1,4 @@
+<!-- dashboard.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -53,8 +54,8 @@
           data-duration="{{ song.duration }}"
       >
         <span class="song-title">{{ song.title }}</span>
-        <button class="heart-btn" onclick="toggleFavorite('{{ song.video_id }}')">♥</button>
-        <button class="play-btn" onclick="playSongFromFavorites(this)">Play</button>
+        <button class="heart-btn">♥</button>
+        <button class="play-btn">Play</button>
       </li>
       {% endfor %}
     </ul>
@@ -63,7 +64,7 @@
   <!-- Пошук -->
   <div id="search-container">
     <input type="text" id="search" placeholder="Enter song or artist" autocomplete="off">
-    <button class="search-button" onclick="searchMusic()">Search</button>
+    <button class="search-button">Search</button>
     <ul id="autocomplete-suggestions"></ul>
   </div>
 
@@ -86,7 +87,7 @@
     </div>
 
     <div id="playback-progress-container">
-      <button id="current-heart-btn" onclick="toggleFavoriteInPlayback()">♡</button>
+      <button id="current-heart-btn">♡</button>
 
       <!-- Початкові значення 0:00 -->
       <span id="prog-start">0:00</span>
@@ -114,6 +115,6 @@
 
   <!-- Socket.IO + JS -->
   <script src="https://cdn.socket.io/4.5.4/socket.io.min.js" crossorigin="anonymous"></script>
-  <script src="/static/js/main.js"></script>
+  <script type="module" src="/static/js/main.js"></script>
 </body>
 </html>

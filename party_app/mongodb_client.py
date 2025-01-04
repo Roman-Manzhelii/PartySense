@@ -23,43 +23,31 @@ def create_indexes():
         if "google_id_1" not in existing_indexes:
             users_collection.create_index("google_id", unique=True)
             logger.info("Unique index on google_id created.")
-        else:
-            logger.info("Unique index on google_id already exists.")
 
         existing_playback_history_idx = playback_history_collection.index_information()
         if "google_id_1_played_at_-1" not in existing_playback_history_idx:
             playback_history_collection.create_index([("google_id", 1), ("played_at", -1)])
             logger.info("Compound index on playback_history created.")
-        else:
-            logger.info("Compound index on playback_history already exists.")
 
         existing_playlists_idx = playlists_collection.index_information()
         if "google_id_1" not in existing_playlists_idx:
             playlists_collection.create_index("google_id")
             logger.info("Index on google_id for playlists created.")
-        else:
-            logger.info("Index on google_id for playlists already exists.")
 
         existing_favorites_idx = favorites_collection.index_information()
         if "google_id_1" not in existing_favorites_idx:
             favorites_collection.create_index("google_id")
             logger.info("Index on google_id for favorites created.")
-        else:
-            logger.info("Index on google_id for favorites already exists.")
 
         existing_categories_idx = categories_collection.index_information()
         if "google_id_1" not in existing_categories_idx:
             categories_collection.create_index("google_id")
             logger.info("Index on google_id for categories created.")
-        else:
-            logger.info("Index on google_id for categories already exists.")
 
         existing_playback_idx = current_playback_collection.index_information()
         if "google_id_1" not in existing_playback_idx:
             current_playback_collection.create_index("google_id", unique=True)
             logger.info("Unique index on google_id for current_playback created.")
-        else:
-            logger.info("Unique index on google_id for current_playback already exists.")
 
     except Exception as e:
         logger.error(f"Error during creating indexes: {e}")

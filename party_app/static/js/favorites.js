@@ -1,4 +1,5 @@
 import { API } from './api.js';
+import { playSongFromFavorites } from './playback/playbackActions.js';
 
 export function toggleFavorite(video_id) {
   fetch(API.FAVORITES)
@@ -72,8 +73,12 @@ export function refreshFavoritesList() {
         playBtn.className = "play-btn";
         playBtn.textContent = "Play";
         playBtn.addEventListener("click", () => {
-          const event = new CustomEvent('playSongFromFavorites', { detail: { video_id: song.video_id, title: song.title, thumbnail_url: song.thumbnail_url, duration: song.duration } });
-          window.dispatchEvent(event);
+          playSongFromFavorites({
+            video_id: song.video_id,
+            title: song.title,
+            thumbnail_url: song.thumbnail_url,
+            duration: song.duration
+          });
         });
 
         li.appendChild(spanTitle);

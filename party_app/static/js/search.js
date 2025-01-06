@@ -1,6 +1,7 @@
+// search.js
 import { API } from './api.js';
 import { debounce } from './helpers.js';
-import { playSongFromSearch } from './playback.js';
+import { playSongFromSearch } from './playback/playbackActions.js';
 
 let nextPageToken = null;
 let isLoading = false;
@@ -10,6 +11,15 @@ const loadedVideoIds = new Set();
 export function setupSearch() {
   const searchInput = document.getElementById("search");
   const suggestionsList = document.getElementById("autocomplete-suggestions");
+  const searchBtn = document.getElementById("search-btn");
+
+  if (searchBtn) {
+    searchBtn.addEventListener("click", () => {
+      if (searchInput) {
+        initiateSearch(searchInput.value.trim());
+      }
+    });
+  }
 
   const debouncedAutocomplete = debounce(() => {
     if (!searchInput) return;
@@ -94,7 +104,7 @@ export function initiateSearch(query) {
   fetchResults(query);
 }
 
-export function fetchResults(query) {
+function fetchResults(query) {
   if (!query || isLoading) return;
   isLoading = true;
   updateLoadingIndicator(true);

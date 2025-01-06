@@ -18,7 +18,7 @@ from mongodb_client import (
     add_playlist_to_category,
     get_categories,
     get_current_playback,
-    update_current_playback,
+    update_current_playback
 )
 import logging
 
@@ -48,6 +48,9 @@ class UserService:
 
     def update_tokens_if_expired(self, google_id, user_doc):
         tokens_updated = False
+        if user_doc is None:
+            return tokens_updated
+
         expiration_commands = user_doc.get("channel_token_commands_expiration")
         if expiration_commands and self.pubnub_client.is_token_expired(expiration_commands):
             new_cmd_token, new_cmd_exp = self.pubnub_client.generate_token([user_doc["channel_name_commands"]])
@@ -75,12 +78,12 @@ class UserService:
             else:
                 logger.error("Failed to update channel_token_status.")
                 return False
+
         return tokens_updated
 
     def get_all_users(self):
         return get_all_users()
 
-    # Плейлисти
     def create_playlist(self, google_id, name, description=""):
         pid = create_playlist(google_id, name, description)
         logger.info(f"Created playlist '{name}' with ID {pid} for user {google_id}.")
@@ -101,7 +104,6 @@ class UserService:
             logger.warning(f"Failed to delete playlist {playlist_id} for user {google_id}.")
         return success
 
-    # Улюблені пісні
     def create_favorites(self, google_id):
         fid = create_favorites(google_id)
         logger.info(f"Created favorites with ID {fid} for user {google_id}.")
@@ -118,7 +120,6 @@ class UserService:
     def get_favorites(self, google_id):
         return get_favorites(google_id)
 
-    # Категорії
     def create_category(self, google_id, name, description=""):
         create_category(google_id, name, description)
         logger.info(f"Created category '{name}' for user {google_id}.")
@@ -130,10 +131,10 @@ class UserService:
     def get_categories(self, google_id):
         return get_categories(google_id)
 
-    # Поточне відтворення
     def get_current_playback(self, google_id):
         return get_current_playback(google_id)
 
     def update_current_playback(self, google_id, current_song):
+        logger.info(f"[UserService] update_current_playback called. user={google_id}, new current_song={current_song}")
         update_current_playback(google_id, current_song)
-        logger.info(f"Updated current playback for user {google_id} with song {current_song.get('video_id')}.")
+        logger.info(f"[UserService] Completed update_current_playback for user={google_id}")

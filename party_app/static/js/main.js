@@ -1,33 +1,39 @@
-import { initLottie } from './lottie.js';
-import { setupSearch } from './search.js';
-import { setupSocket } from './socket.js';
-import { setupPlaybackUI, fetchCurrentPlayback } from './playback.js';
-import { initProfileMenuUI } from './profile.js';
-import { initVolumeUI } from './volume.js';
-import { initProfileDropdownToggle } from './profileDropdown.js';
-import { refreshFavoritesList, toggleFavorite } from './favorites.js';
+import { initLottie } from "./lottie.js";
+import { setupSearch } from "./search.js";
+import { setupSocket } from "./socket.js";
+import {
+  setupPlaybackUI,
+  fetchCurrentPlayback,
+  setupPlaybackUpdateListener
+} from "./playback/index.js";
+import { initProfileMenuUI } from "./profile.js";
+import { initVolumeUI } from "./volume.js";
+import { initProfileDropdownToggle } from "./profileDropdown.js";
+import { refreshFavoritesList, toggleFavorite } from "./favorites.js";
+import { getCurrentVideoId } from "./playback/playbackState.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   initLottie();
   setupSearch();
-  setupSocket();
+  const socket = setupSocket();
+  setupPlaybackUpdateListener(socket);
   setupPlaybackUI();
+  fetchCurrentPlayback();
   initProfileMenuUI();
   initVolumeUI();
   initProfileDropdownToggle();
-  fetchCurrentPlayback();
   refreshFavoritesList();
-  
-  window.toggleFavoriteInPlayback = () => {
-    if (window.currentVideoId) {
-      toggleFavorite(window.currentVideoId);
-    } else {
-      console.error("No currentVideoId available for toggling favorite.");
-      alert("No song is currently playing to toggle favorite.");
-    }
-  };
-  
-  window.toggleFavorite = (video_id) => {
-    toggleFavorite(video_id);
-  };
+
+  const currentHeartBtn = document.getElementById("current-heart-btn");
+  if (currentHeartBtn) {
+    currentHeartBtn.addEventListener("click", () => {
+      const videoId = getCurrentVideoId();
+      if (videoId) {
+        toggleFavorite(videoId);
+      } else {
+        console.warn("No current videoId found, can't add to favorites.");
+        alert("No song is currently playing to toggle favorite.");
+      }
+    });
+  }
 });

@@ -14,8 +14,8 @@ class PlayCommandSchema(Schema):
     action = fields.String(
         required=True,
         validate=lambda x: x in [
-            "play", "pause", "resume", "next", "previous",
-            "seek", "set_mode", "set_motion_detection"
+            "play", "pause", "next", "previous",
+            "seek", "set_mode", "set_motion_detection", "update_position"
         ]
     )
     video_id = fields.String(required=False)
@@ -54,7 +54,6 @@ def handle_playback(current_user):
             if not video_id:
                 return jsonify({"error": "video_id is required for play action"}), 400
 
-            # 1) Запитуємо реальні дані
             details = get_video_details(video_id)
             if details:
                 actual_title = details["title"] or fallback_title
@@ -65,7 +64,6 @@ def handle_playback(current_user):
                 actual_thumb = fallback_thumb
                 actual_duration = fallback_duration
 
-            # 2) Зберігаємо у current_playback
             current_song = {
                 "video_id": video_id,
                 "title": actual_title,
@@ -80,7 +78,6 @@ def handle_playback(current_user):
             user_service.update_current_playback(google_id, current_song)
             user_service.log_playback_history(google_id, video_id, actual_title)
 
-            # 3) Публікуємо команду в PubNub
             command = {
                 "action": "play",
                 "video_id": video_id,
@@ -96,10 +93,11 @@ def handle_playback(current_user):
             return jsonify({"message": "Play command sent."}), 200
 
         elif action == "pause":
+            logger.info(f"[handle_playback] 'pause' action received. position={position}, user={google_id}")
             curr = user_service.get_current_playback(google_id)
             if curr and "current_song" in curr:
                 song = curr["current_song"]
-                song["state"] = "paused"
+                song["state"] = "pause"
                 song["position"] = position
                 song["updated_at"] = datetime.now(timezone.utc)
                 user_service.update_current_playback(google_id, song)
@@ -111,29 +109,15 @@ def handle_playback(current_user):
             })
             return jsonify({"message": "Pause command sent."}), 200
 
-        elif action == "resume":
-            curr = user_service.get_current_playback(google_id)
-            if curr and "current_song" in curr:
-                song = curr["current_song"]
-                song["state"] = "playing"
-                song["position"] = position
-                song["updated_at"] = datetime.now(timezone.utc)
-                user_service.update_current_playback(google_id, song)
-
-            pubnub_client.publish_message(current_user["channel_name_commands"], {
-                "action": "resume",
-                "position": position,
-                "timestamp": timestamp
-            })
-            return jsonify({"message": "Resume command sent."}), 200
-
         elif action in ["next", "previous"]:
+            logger.info(f"[handle_playback] '{action}' action for user={google_id}")
             pubnub_client.publish_message(current_user["channel_name_commands"], {
                 "action": action
             })
             return jsonify({"message": f"{action.capitalize()} command sent."}), 200
 
         elif action == "seek":
+            logger.info(f"[handle_playback] 'seek' action. position={position}, user={google_id}")
             curr = user_service.get_current_playback(google_id)
             if curr and "current_song" in curr:
                 song = curr["current_song"]
@@ -149,6 +133,7 @@ def handle_playback(current_user):
             return jsonify({"message": "Seek command sent."}), 200
 
         elif action == "set_mode":
+            logger.info(f"[handle_playback] 'set_mode'={mode}, user={google_id}")
             curr = user_service.get_current_playback(google_id)
             if curr and "current_song" in curr:
                 song = curr["current_song"]
@@ -164,6 +149,7 @@ def handle_playback(current_user):
 
         elif action == "set_motion_detection":
             enabled = validated_data.get("enabled", True)
+            logger.info(f"[handle_playback] set_motion_detection={enabled}, user={google_id}")
             prefs = current_user.get("preferences", {})
             prefs["motion_detection"] = enabled
             user_service.save_preferences(google_id, prefs)
@@ -181,7 +167,27 @@ def handle_playback(current_user):
             })
             return jsonify({"message": f"Motion detection => {enabled}"}), 200
 
-        return jsonify({"error": "Invalid action."}), 400
+        elif action == "update_position":
+            logger.info(f"[handle_playback] 'update_position' for user={google_id}, position={position}")
+            curr = user_service.get_current_playback(google_id)
+            if not curr or "current_song" not in curr:
+                logger.warning(f"No current_song found in DB for user={google_id}")
+                return jsonify({"error": "No current song found"}), 400
+
+            song = curr["current_song"]
+            song["position"] = position
+            song["updated_at"] = datetime.now(timezone.utc)
+
+            if "state" not in song:
+                song["state"] = "playing"
+
+            user_service.update_current_playback(google_id, song)
+
+            logger.info(f"[handle_playback] Updated position => {position} in DB for user={google_id}")
+            return jsonify({"success": True, "message": "Position updated."}), 200
+
+        else:
+            return jsonify({"error": "Invalid action."}), 400
 
     except ValidationError as e:
         logger.error(f"ValidationError: {e}")
@@ -190,7 +196,6 @@ def handle_playback(current_user):
         logger.error(f"Error in handle_playback: {e}")
         logger.error(traceback.format_exc())
         return jsonify({'error': 'Internal server error'}), 500
-    
 
 @playback_bp.route("/api/current_playback", methods=["GET"])
 @token_required
@@ -206,4 +211,4 @@ def get_current_playback_route(current_user):
     except Exception as e:
         logger.error(f"Error in get_current_playback_route: {e}")
         logger.error(traceback.format_exc())
-        return jsonify({'error': 'Internal server error'}), 500    
+        return jsonify({'error': 'Internal server error'}), 500

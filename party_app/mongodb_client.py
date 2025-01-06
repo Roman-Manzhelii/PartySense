@@ -165,8 +165,10 @@ def get_current_playback(google_id):
     return current_playback_collection.find_one({"google_id": google_id})
 
 def update_current_playback(google_id, current_song):
-    current_playback_collection.update_one(
+    logger.info(f"[mongodb_client] update_current_playback. google_id={google_id}, current_song={current_song}")
+    result = current_playback_collection.update_one(
         {"google_id": google_id},
         {"$set": {"current_song": current_song}},
         upsert=True
     )
+    logger.info(f"[mongodb_client] update_current_playback => matched_count={result.matched_count}, modified_count={result.modified_count}")

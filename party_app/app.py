@@ -40,10 +40,21 @@ def handle_status_update(message):
         if not user_id or not current_song:
             logger.error("Invalid status message received.")
             return
+        logger.info(f"[handle_status_update] got message: {message}")
 
         now = datetime.now(timezone.utc)
         last_state = last_playback_states.get(user_id)
         last_update = last_update_times.get(user_id, now - timedelta(seconds=10))
+
+        # [ADDED] check DB to avoid overwriting a bigger position
+        existing_db = app.user_service.get_current_playback(user_id)
+        if existing_db and "current_song" in existing_db:
+            db_song = existing_db["current_song"]
+            db_pos = db_song.get("position", 0)
+            msg_pos = current_song.get("position", 0)
+            if msg_pos < db_pos:
+                logger.info(f"[handle_status_update] ignoring older position msg_pos={msg_pos} < db_pos={db_pos}")
+                return  # do nothing
 
         # Перевірка змін стану
         if last_state != current_song:

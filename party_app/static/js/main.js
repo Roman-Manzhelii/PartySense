@@ -1,39 +1,54 @@
-import { initLottie } from "./lottie.js";
-import { setupSearch } from "./search.js";
-import { setupSocket } from "./socket.js";
-import {
-  setupPlaybackUI,
-  fetchCurrentPlayback,
-  setupPlaybackUpdateListener
-} from "./playback/index.js";
-import { initProfileMenuUI } from "./profile.js";
-import { initVolumeUI } from "./volume.js";
-import { initProfileDropdownToggle } from "./profileDropdown.js";
-import { refreshFavoritesList, toggleFavorite } from "./favorites.js";
-import { getCurrentVideoId } from "./playback/playbackState.js";
+document.addEventListener("DOMContentLoaded", async () => {
+  // Паралельне завантаження Lottie-анімацій
+  const lottiePromise = import("./lottie.js").then(({ initLottie }) =>
+    initLottie()
+  );
 
-document.addEventListener("DOMContentLoaded", () => {
-  initLottie();
-  setupSearch();
-  const socket = setupSocket();
-  setupPlaybackUpdateListener(socket);
-  setupPlaybackUI();
-  fetchCurrentPlayback();
-  initProfileMenuUI();
-  initVolumeUI();
-  initProfileDropdownToggle();
-  refreshFavoritesList();
-
-  const currentHeartBtn = document.getElementById("current-heart-btn");
-  if (currentHeartBtn) {
-    currentHeartBtn.addEventListener("click", () => {
-      const videoId = getCurrentVideoId();
-      if (videoId) {
-        toggleFavorite(videoId);
-      } else {
-        console.warn("No current videoId found, can't add to favorites.");
-        alert("No song is currently playing to toggle favorite.");
+  // Паралельне завантаження інших модулів
+  const otherModules = Promise.all([
+    import("./search.js").then(({ setupSearch }) => setupSearch()),
+    import("./socket.js").then(({ setupSocket }) => {
+      const socket = setupSocket();
+      import("./playback/index.js").then(({ setupPlaybackUpdateListener }) =>
+        setupPlaybackUpdateListener(socket)
+      );
+    }),
+    import("./playback/index.js").then(
+      ({ setupPlaybackUI, fetchCurrentPlayback }) => {
+        setupPlaybackUI();
+        fetchCurrentPlayback();
       }
-    });
-  }
+    ),
+    import("./profile.js").then(({ initProfileMenuUI }) => initProfileMenuUI()),
+    import("./volume.js").then(({ initVolumeUI }) => initVolumeUI()),
+    import("./profileDropdown.js").then(({ initProfileDropdownToggle }) =>
+      initProfileDropdownToggle()
+    ),
+    import("./favorites.js").then(
+      ({ refreshFavoritesList, toggleFavorite }) => {
+        refreshFavoritesList();
+        const currentHeartBtn = document.getElementById("current-heart-btn");
+        if (currentHeartBtn) {
+          currentHeartBtn.addEventListener("click", () => {
+            import("./playback/playbackState.js").then(
+              ({ getCurrentVideoId }) => {
+                const videoId = getCurrentVideoId();
+                if (videoId) {
+                  toggleFavorite(videoId);
+                } else {
+                  console.warn(
+                    "No current videoId found, can't add to favorites."
+                  );
+                  alert("No song is currently playing to toggle favorite.");
+                }
+              }
+            );
+          });
+        }
+      }
+    ),
+  ]);
+
+  // Очікуємо завершення Lottie-анімацій і модулів
+  await Promise.all([lottiePromise, otherModules]);
 });

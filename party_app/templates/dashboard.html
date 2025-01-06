@@ -1,4 +1,3 @@
-<!-- dashboard.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,8 +5,18 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>PartySense</title>
   <link rel="stylesheet" href="/static/css/styles.css">
+  <link rel="preload" href="/static/lottie/gradient2.json" as="fetch" type="application/json" crossorigin="anonymous">
+  <!-- Попереднє завантаження Lottie.js -->
+  <script
+    src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.9.6/lottie.min.js"
+    referrerpolicy="no-referrer">
+  </script>
 </head>
+
 <body>
+  <!-- Контейнери з фіксованими розмірами для анімації -->
+  <div id="lottie-container"></div>
+  <div id="lottie-container-bottom"></div>
 
   <!-- Меню профілю у правому верхньому куті -->
   <header id="top-bar">
@@ -35,12 +44,6 @@
       </div>
     </div>
   </header>
-
-  <!-- Lottie.js для анімації -->
-  <script
-    src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.9.6/lottie.min.js"
-    referrerpolicy="no-referrer">
-  </script>
 
   <!-- Список улюблених -->
   <section id="favorites-section">
@@ -109,9 +112,6 @@
       </div>
     </div>
   </section>
-
-  <div id="lottie-container"></div>
-  <div id="lottie-container-bottom"></div>
 
   <!-- Socket.IO + JS -->
   <script src="https://cdn.socket.io/4.5.4/socket.io.min.js" crossorigin="anonymous"></script>

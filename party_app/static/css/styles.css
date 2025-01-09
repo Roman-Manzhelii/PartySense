@@ -1,3 +1,4 @@
+/* Universal reset */
 *,
 *::before,
 *::after {
@@ -19,7 +20,7 @@ body {
   overflow-x: hidden;
 }
 
-/* variables */
+/* Variables */
 :root {
   --color-primary: #8228ec;
   --color-secondary: #f626af;
@@ -31,7 +32,7 @@ body {
   --playback-height: 150px;
 }
 
-/* headings, buttons */
+/* Headings, buttons */
 h1, h2 {
   text-align: center;
 }
@@ -49,7 +50,7 @@ button:hover {
   transform: scale(1.02);
 }
 
-/* Top bar (profile menu) */
+/* Top bar */
 #top-bar {
   position: relative;
   width: 100%;
@@ -62,7 +63,6 @@ button:hover {
   padding-right: 0.5rem;
   z-index: 9998;
 }
-
 .profile-menu {
   position: relative;
   display: flex;
@@ -70,19 +70,16 @@ button:hover {
   gap: 0.5rem;
   cursor: pointer;
 }
-
 #profile-username {
   font-weight: bold;
   user-select: none;
 }
-
 .logo-icon {
   width: 40px;
   height: 40px;
   border-radius: 50%;
   user-select: none;
 }
-
 .profile-dropdown {
   position: absolute;
   top: 60px;
@@ -91,24 +88,20 @@ button:hover {
   border: 1px solid #333;
   border-radius: var(--border-radius);
   padding: 0.5rem;
-  display: none; /* схований за замовчуванням */
+  display: none;
   flex-direction: column;
   min-width: 160px;
   z-index: 9999;
 }
-
-/* Коли меню профілю має клас .open — показуємо блок */
 .profile-menu.open .profile-dropdown {
   display: flex;
 }
-
 .profile-dropdown .pref-item {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   margin: 0.5rem 0;
 }
-
 .profile-dropdown #logout-btn {
   display: inline-block;
   color: #fff;
@@ -123,6 +116,7 @@ button:hover {
   transform: scale(1.02);
 }
 
+/* Lottie containers */
 #lottie-container {
   position: absolute;
   top: 60px;
@@ -134,18 +128,17 @@ button:hover {
   pointer-events: none;
   z-index: 1;
 }
-
 #lottie-container-bottom {
-    position: fixed; /* Fixed для закріплення на екрані */
-    bottom: var(--playback-height); /* Відстань від нижньої межі */
-    left: 0;
-    width: 100%;
-    max-width: 400px;
-    height: auto;
-    transform: rotate(180deg); /* Поворот на 180 градусів */
-    pointer-events: none; /* Щоб не блокувати взаємодію */
-    z-index: 1; /* Найнижчий пріоритет серед інших елементів */
-  }  
+  position: fixed;
+  bottom: var(--playback-height);
+  left: 0;
+  width: 100%;
+  max-width: 400px;
+  height: auto;
+  transform: rotate(180deg);
+  pointer-events: none;
+  z-index: 1;
+}
 
 /* Favorites */
 #favorites-section {
@@ -180,6 +173,7 @@ button:hover {
   margin: 0 0.25rem;
 }
 
+/* Search */
 #search-container {
   margin: 1rem 0;
   text-align: center;
@@ -189,7 +183,6 @@ button:hover {
   align-items: center;
   gap: 0.5rem;
 }
-
 #search {
   width: 30%;
   max-width: 400px;
@@ -199,34 +192,30 @@ button:hover {
   background: #111;
   color: #fff;
 }
-
 #autocomplete-suggestions {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
   width: 200px;
   background: #111;
-  border: none; /* без рамки */
   border-radius: var(--border-radius);
   list-style: none;
   box-shadow: 0 4px 6px rgba(0,0,0,0.5);
-  display: none; /* сховано за замовчуванням */
+  display: none;
   z-index: 9997;
 }
-
 .suggestion-item {
   padding: 0.5rem;
   cursor: pointer;
 }
-
 .suggestion-item:hover {
   background: var(--color-bg-hover);
 }
-
 #autocomplete-suggestions.show {
-  display: block; 
+  display: block;
 }
 
+/* Search results */
 #search-results {
   margin: 1rem auto;
   max-width: 900px;
@@ -260,8 +249,13 @@ button:hover {
   margin-top: 0.5rem;
   font-size: 0.9rem;
 }
+#loading {
+  margin-top: 1rem;
+  color: var(--color-primary);
+  font-weight: bold;
+}
 
-/* pinned playback */
+/* Pinned playback */
 #playback-status {
   position: fixed;
   bottom: 0;
@@ -293,9 +287,10 @@ button:hover {
   transition: color var(--transition-speed);
 }
 .playback-btn:hover {
-  color: var(--color-secondary);
+  background-color: #1b1b2f;
 }
 
+/* Progress container */
 #playback-progress-container {
   display: flex;
   align-items: center;
@@ -304,19 +299,15 @@ button:hover {
   position: relative;
   margin-top: 0.5rem;
 }
-
 #prog-start, #prog-end {
   width: 40px;
+  margin: 0 5px;
   text-align: center;
 }
-
-/* Прогрес-бар */
 #playback-progress {
   width: 180px;
   cursor: pointer;
 }
-
-/* Серце зліва */
 #current-heart-btn {
   position: static;
   background: transparent;
@@ -331,7 +322,7 @@ button:hover {
   color: var(--color-primary);
 }
 
-/* Іконка звуку справа */
+/* Volume icon + slider */
 .volume-icon {
   font-size: 1.3rem;
   cursor: pointer;
@@ -342,18 +333,16 @@ button:hover {
   color: var(--color-secondary);
   transform: scale(1.1);
 }
-
 .volume-wrapper {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
 .volume-slider-container {
   display: none;
   position: absolute;
-  bottom: 130%; /* трохи вище іконки, щоб thumb не наїжджав */
+  bottom: 130%;
   left: calc(50% - 1px);
   transform: translateX(-50%);
   background: var(--color-bg-card);
@@ -365,44 +354,34 @@ button:hover {
   z-index: 9999;
   box-shadow: 0 4px 8px rgba(0,0,0,0.8);
 }
-  
-/* Коли показуємо */
 .volume-slider-container.show {
   display: flex;
 }
-  
-/* Слайдер */
 #volume-slider {
-  width: 22px;   
+  width: 22px;
   height: 120px;
-  writing-mode: vertical-rl; 
+  writing-mode: vertical-rl;
   transform: rotate(180deg);
   background: transparent;
   margin: 0 auto;
   cursor: pointer;
   appearance: none;
 }
- 
-/* Прямокутна "кнопка" (thumb) */
 #volume-slider::-webkit-slider-thumb {
-  -webkit-appearance: none; 
-  width: 22px;  
-  height: 8px;  
+  -webkit-appearance: none;
+  width: 22px;
+  height: 8px;
   background: linear-gradient(to bottom, #f626af, #8228ec);
   border-radius: 4px;
   border: none;
   cursor: pointer;
   margin: 0;
 }
-  
-/* Трек */
 #volume-slider::-webkit-slider-runnable-track {
   width: 100%;
   background: #111;
   border-radius: 8px;
 }
- 
-/* Firefox */
 #volume-slider::-moz-range-thumb {
   width: 22px;
   height: 8px;
@@ -417,22 +396,31 @@ button:hover {
   width: 100%;
 }
 
-/* Loading */
-#loading {
-  margin-top: 1rem;
-  color: var(--color-primary);
-  font-weight: bold;
-}
-
-/* media queries */
+/* Media queries */
 @media (max-width: 600px) {
   #lottie-container {
     width: 60%;
     max-width: 250px;
   }
-
   #lottie-container-bottom {
     width: 60%;
     max-width: 150px;
   }
+}
+
+/* Spinner */
+.loading-spinner {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  background: url("/static/img/spinner.gif") center no-repeat;
+  background-size: contain;
+  vertical-align: middle;
+}
+.loading-spinner:hover {
+  background: url("/static/img/spinner.gif") center no-repeat;
+  background-size: contain;
+  cursor: default;
+  transform: none;
 }

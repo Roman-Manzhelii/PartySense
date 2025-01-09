@@ -6,26 +6,54 @@ import {
   getCurrentPosition,
   setCurrentPosition,
   setCurrentVideoId,
-  getPlaybackTimer
+  getPlaybackTimer,
+  getCurrentVideoId
 } from "./playbackState.js";
 import { checkIfFavorite } from "../favoritesUI.js";
 import { secondsToHMS } from "../helpers.js";
 import { startPlaybackTimer, stopPlaybackTimer } from "./playbackTimer.js";
 
+function getPlayPauseBtn() {
+  return document.getElementById("btn-play-pause");
+}
+
+export function showLoadingState() {
+  const btn = getPlayPauseBtn();
+  if (!btn) return;
+  const orig = btn.textContent || "▶";
+  btn.setAttribute("data-orig-text", orig);
+  btn.textContent = "";
+  btn.disabled = true;
+  btn.classList.add("loading-spinner");
+}
+
+export function hideLoadingState() {
+  const btn = getPlayPauseBtn();
+  if (!btn) return;
+  btn.classList.remove("loading-spinner");
+  btn.disabled = false;
+  const orig = btn.getAttribute("data-orig-text") || "▶";
+  btn.textContent = orig;
+  btn.removeAttribute("data-orig-text");
+  if (getCurrentPlayingState() === "playing" && !getPlaybackTimer()) {
+    startPlaybackTimer();
+  }
+}
+
 export function updatePlaybackUI(data) {
   console.log("updatePlaybackUI called with data:", data);
   if (!data || !data.current_song) return;
-
-  const { video_id, title, state, position, duration } = data.current_song;
+  const incomingSong = data.current_song;
+  const currentLocalId = getCurrentVideoId();
+  const { video_id, title, state, position, duration } = incomingSong;
   console.log(
     `Updating playback UI with [${video_id}, ${title}, ${state}, pos=${position}, dur=${duration}]`
   );
 
+  let finalPos = position || 0;
   const localPos = getCurrentPosition();
   const localState = getCurrentPlayingState();
-  let finalPos = position || 0;
 
-  // Логіка “не відкочуватися назад”
   if (localState === "playing" && localPos > finalPos) {
     console.log(`[updatePlaybackUI] localPos ${localPos} > serverPos ${finalPos}, keep local pos`);
     finalPos = localPos;
@@ -33,25 +61,28 @@ export function updatePlaybackUI(data) {
     console.log(`[updatePlaybackUI] serverPos ${finalPos} > localPos ${localPos}, use serverPos`);
   }
 
+  // Скидання позиції в 0 при зміні пісні
+  if (video_id !== currentLocalId) {
+    setCurrentVideoId(video_id);
+    setCurrentPosition(0);
+    finalPos = 0;
+  }
+
   setCurrentPlayingState(state);
   setCurrentPosition(finalPos);
   setCurrentDuration(duration || 0);
 
+  const skipTitleUpdate = incomingSong.state === "pause" && currentLocalId && video_id !== currentLocalId;
   updateCurrentPlaybackUI(
-    { video_id, title, duration },
+    skipTitleUpdate ? null : { video_id, title, duration },
     state,
-    finalPos
+    skipTitleUpdate ? 0 : finalPos
   );
 
-  // ====== ОНОВЛЕНА ЛОГІКА ======
   if (state === "playing") {
-    // якщо або localState != playing, або таймер не запущений => треба start
-    // інакше, якщо Timer уже є, все гаразд
-    if (localState !== "playing" || !getPlaybackTimer()) {
-      console.log("[updatePlaybackUI] => startPlaybackTimer() (force start if no timer)");
+    if (!getPlaybackTimer()) {
+      console.log("[updatePlaybackUI] => startPlaybackTimer()");
       startPlaybackTimer();
-    } else {
-      console.log("[updatePlaybackUI] already playing and timer is running => do nothing");
     }
   } else {
     console.log("[updatePlaybackUI] state != playing => stopPlaybackTimer()");
@@ -61,8 +92,8 @@ export function updatePlaybackUI(data) {
 
 export function updateCurrentPlaybackUI(songData, state, pos) {
   const titleEl = document.getElementById("current-song-title");
-  if (state === "pause" && !songData) {
-    // skip
+  if (!songData && state === "pause") {
+    // Якщо немає даних про трек і він на паузі — залишаємо попереднє відображення
   } else if (!songData) {
     if (titleEl) titleEl.textContent = "N/A";
   } else {
@@ -71,22 +102,18 @@ export function updateCurrentPlaybackUI(songData, state, pos) {
     }
     setCurrentVideoId(songData.video_id);
     setCurrentDuration(songData.duration || 0);
-
     const heartBtn = document.getElementById("current-heart-btn");
     if (heartBtn && songData.video_id) {
       checkIfFavorite(songData.video_id);
     }
   }
-
   setCurrentPlayingState(state);
   setCurrentPosition(pos || 0);
-
   const slider = document.getElementById("playback-progress");
   if (slider) {
     slider.max = getCurrentDuration();
     slider.value = getCurrentPosition();
   }
-
   const progStart = document.getElementById("prog-start");
   if (progStart) {
     progStart.textContent = secondsToHMS(getCurrentPosition());
@@ -95,16 +122,12 @@ export function updateCurrentPlaybackUI(songData, state, pos) {
   if (progEnd) {
     progEnd.textContent = secondsToHMS(getCurrentDuration());
   }
-
   const playPauseBtn = document.getElementById("btn-play-pause");
   if (playPauseBtn) {
     playPauseBtn.textContent = (state === "playing") ? "⏸" : "▶";
   }
 }
 
-/**
- * Called explicitly from the 20s interval in playbackTimer.js
- */
 export function updatePositionOnBackend(position) {
   console.log("[updatePositionOnBackend] sending update_position with pos =", position);
   const nowTs = Date.now();

@@ -6,7 +6,7 @@ import logging
 import traceback
 from datetime import datetime, timezone
 
-from youtube_api import get_video_details
+from youtube_api import get_video_details, get_direct_stream_url
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +64,8 @@ def handle_playback(current_user):
                 actual_thumb = fallback_thumb
                 actual_duration = fallback_duration
 
+            direct_url = get_direct_stream_url(video_id)
+
             current_song = {
                 "video_id": video_id,
                 "title": actual_title,
@@ -79,8 +81,8 @@ def handle_playback(current_user):
             user_service.log_playback_history(google_id, video_id, actual_title)
 
             command = {
-                "action": "play",
-                "video_id": video_id,
+                "action": "play_direct",
+                "stream_url": direct_url,
                 "title": actual_title,
                 "thumbnail_url": actual_thumb,
                 "duration": actual_duration,
@@ -90,7 +92,7 @@ def handle_playback(current_user):
             }
             pubnub_client.publish_message(current_user["channel_name_commands"], command)
             logger.info(f"Published play command: {command}")
-            return jsonify({"message": "Play command sent."}), 200
+            return jsonify({"message": "Play command (direct URL) sent."}), 200
 
         elif action == "pause":
             logger.info(f"[handle_playback] 'pause' action received. position={position}, user={google_id}")

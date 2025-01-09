@@ -9,7 +9,7 @@ export function fetchCurrentPlayback() {
     .then(res => res.json())
     .then(data => {
       if (data.current_song) {
-        updatePlaybackUI(data);
+        updatePlaybackUI({ current_song: data.current_song });
       } else {
         updatePlaybackUI({ current_song: null });
       }

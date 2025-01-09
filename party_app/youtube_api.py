@@ -2,7 +2,7 @@ import os
 import requests
 import logging
 import re
-from datetime import datetime, timezone
+import yt_dlp
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +67,28 @@ def get_video_details(video_id):
     except requests.RequestException as e:
         logger.error(f"Error fetching YouTube video details: {e}")
         return None
+    
+def get_direct_stream_url(video_id: str) -> str:
+    if not video_id:
+        logger.warning("No video_id provided to get_direct_stream_url.")
+        return ""
+
+    ydl_opts = {
+        'format': 'bestaudio/best',
+        'quiet': True,
+    }
+    full_url = f"https://www.youtube.com/watch?v={video_id}"
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(full_url, download=False)
+            stream_url = info.get('url')
+            if not stream_url:
+                logger.warning(f"No direct stream URL found for {video_id}")
+                return ""
+            return stream_url
+    except Exception as e:
+        logger.error(f"Error in get_direct_stream_url({video_id}): {e}")
+        return ""    
 
 # Решта функцій без змін:
 def search_youtube_music(query, max_results=20, page_token=None):

@@ -33,7 +33,6 @@ def add_favorite_song(current_user):
 
     video_id = validated_data["video_id"]
 
-    # Дістаємо з YouTube API реальні thumbnail, title, duration
     details = get_video_details(video_id)
     if details:
         real_title = details["title"]

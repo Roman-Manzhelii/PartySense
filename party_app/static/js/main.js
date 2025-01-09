@@ -1,10 +1,8 @@
 document.addEventListener("DOMContentLoaded", async () => {
-  // Паралельне завантаження Lottie-анімацій
   const lottiePromise = import("./lottie.js").then(({ initLottie }) =>
     initLottie()
   );
 
-  // Паралельне завантаження інших модулів
   const otherModules = Promise.all([
     import("./search.js").then(({ setupSearch }) => setupSearch()),
     import("./socket.js").then(({ setupSocket }) => {
@@ -49,6 +47,5 @@ document.addEventListener("DOMContentLoaded", async () => {
     ),
   ]);
 
-  // Очікуємо завершення Lottie-анімацій і модулів
   await Promise.all([lottiePromise, otherModules]);
 });

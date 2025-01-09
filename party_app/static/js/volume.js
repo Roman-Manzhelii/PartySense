@@ -1,4 +1,3 @@
-// volume.js
 import { debounce } from './helpers.js';
 import { updatePreferencesOnServer } from './preferences.js';
 
@@ -9,6 +8,12 @@ export function initVolumeUI() {
   const debouncedPrefsUpdate = debounce(updatePreferencesOnServer, 400);
 
   if (!volumeIcon || !volumeSliderContainer || !volumeSlider) return;
+
+  if (volumeSlider.value === "0") {
+    volumeIcon.textContent = "🔇";
+  } else {
+    volumeIcon.textContent = "🔊";
+  }
 
   volumeIcon.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -25,5 +30,10 @@ export function initVolumeUI() {
   volumeSlider.addEventListener("input", () => {
     const val = volumeSlider.value;
     debouncedPrefsUpdate({ volume: parseFloat(val) / 100 });
+    if (val === "0") {
+      volumeIcon.textContent = "🔇";
+    } else {
+      volumeIcon.textContent = "🔊";
+    }
   });
 }

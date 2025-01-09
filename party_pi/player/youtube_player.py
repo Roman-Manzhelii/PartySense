@@ -1,5 +1,3 @@
-# player/youtube_player.py
-
 import vlc
 import time
 import threading
@@ -15,12 +13,9 @@ class YouTubePlayer:
         ])
         self._player = self._instance.media_player_new()
         self._lock = threading.Lock()
+        self.current_stream_url = None
 
-    # NEW: replaced old .play(...) with .play_url(...)
     def play_url(self, url: str, position: float = 0, volume: int = 50):
-        """
-        Pi doesn't call yt_dlp. We have a direct URL from the server.
-        """
         with self._lock:
             if not url:
                 print("[YouTubePlayer] No URL provided to play_url().")
@@ -29,8 +24,8 @@ class YouTubePlayer:
             media = self._instance.media_new(url)
             self._player.set_media(media)
             self._player.play()
+            self.current_stream_url = url
 
-            # Wait briefly until it transitions to playing, or 3s pass
             start_wait = time.time()
             while not self._player.is_playing():
                 time.sleep(0.05)

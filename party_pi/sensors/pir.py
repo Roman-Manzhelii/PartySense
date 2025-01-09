@@ -1,4 +1,3 @@
-# sensors/pir.py
 import RPi.GPIO as GPIO
 import time
 

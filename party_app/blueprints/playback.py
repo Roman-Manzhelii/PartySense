@@ -54,6 +54,33 @@ def handle_playback(current_user):
             if not video_id:
                 return jsonify({"error": "video_id is required for play action"}), 400
 
+            current_playback = user_service.get_current_playback(google_id)
+            if current_playback and "current_song" in current_playback:
+                current_song = current_playback["current_song"]
+                if (current_song["video_id"] == video_id and current_song["state"] in ["playing", "pause"]):
+                    current_song["state"] = "playing"
+                    current_song["position"] = position
+                    current_song["updated_at"] = datetime.now(timezone.utc)
+                    stream_url = current_song.get("stream_url")
+                    if not stream_url:
+                        stream_url = get_direct_stream_url(video_id)
+                        current_song["stream_url"] = stream_url
+                    user_service.update_current_playback(google_id, current_song)
+
+                    command = {
+                        "action": "play_direct",
+                        "stream_url": stream_url,
+                        "title": current_song["title"],
+                        "thumbnail_url": current_song["thumbnail_url"],
+                        "duration": current_song["duration"],
+                        "position": position,
+                        "timestamp": timestamp,
+                        "mode": mode
+                    }
+                    pubnub_client.publish_message(current_user["channel_name_commands"], command)
+                    logger.info(f"Updated position for same video {video_id} at position {position}.")
+                    return jsonify({"message": "Play command for same video updated."}), 200
+
             details = get_video_details(video_id)
             if details:
                 actual_title = details["title"] or fallback_title
@@ -75,7 +102,8 @@ def handle_playback(current_user):
                 "state": "playing",
                 "mode": mode,
                 "motion_detected": current_user.get("preferences", {}).get("motion_detection", True),
-                "updated_at": datetime.now(timezone.utc)
+                "updated_at": datetime.now(timezone.utc),
+                "stream_url": direct_url
             }
             user_service.update_current_playback(google_id, current_song)
             user_service.log_playback_history(google_id, video_id, actual_title)

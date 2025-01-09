@@ -1,48 +1,54 @@
-let currentDuration = 0;
+let currentPlayingState = "pause"; 
 let currentPosition = 0;
-let currentPlayingState = "pause";
-let confirmationTimeout = null;
-let playbackTimer = null;
+let currentDuration = 0;
 let currentVideoId = null;
+let playbackTimer = null;
+let confirmationTimeout = null;
 
-export function getCurrentDuration() {
-  return currentDuration;
-}
-export function setCurrentDuration(val) {
-  currentDuration = val;
-}
-
-export function getCurrentPosition() {
-  return currentPosition;
-}
-export function setCurrentPosition(val) {
-  currentPosition = val;
+export function setCurrentPlayingState(state) {
+  currentPlayingState = state;
 }
 
 export function getCurrentPlayingState() {
   return currentPlayingState;
 }
-export function setCurrentPlayingState(val) {
-  currentPlayingState = val;
+
+export function setCurrentPosition(pos) {
+  currentPosition = pos;
 }
 
-export function getConfirmationTimeout() {
-  return confirmationTimeout;
-}
-export function setConfirmationTimeout(val) {
-  confirmationTimeout = val;
+export function getCurrentPosition() {
+  return currentPosition;
 }
 
-export function getPlaybackTimer() {
-  return playbackTimer;
+export function setCurrentDuration(dur) {
+  currentDuration = dur;
 }
-export function setPlaybackTimer(val) {
-  playbackTimer = val;
+
+export function getCurrentDuration() {
+  return currentDuration;
+}
+
+export function setCurrentVideoId(id) {
+  currentVideoId = id;
 }
 
 export function getCurrentVideoId() {
   return currentVideoId;
 }
-export function setCurrentVideoId(val) {
-  currentVideoId = val;
+
+export function setPlaybackTimer(timer) {
+  playbackTimer = timer;
+}
+
+export function getPlaybackTimer() {
+  return playbackTimer;
+}
+
+export function setConfirmationTimeout(timeout) {
+  confirmationTimeout = timeout;
+}
+
+export function getConfirmationTimeout() {
+  return confirmationTimeout;
 }

@@ -1,4 +1,3 @@
-# pubnub_client.py
 import logging
 from pubnub.pubnub import PubNub
 from pubnub.callbacks import SubscribeCallback

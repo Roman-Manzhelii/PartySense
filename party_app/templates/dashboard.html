@@ -6,7 +6,6 @@
   <title>PartySense</title>
   <link rel="stylesheet" href="/static/css/styles.css">
   <link rel="preload" href="/static/lottie/gradient2.json" as="fetch" type="application/json" crossorigin="anonymous">
-  <!-- Попереднє завантаження Lottie.js -->
   <script
     src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.9.6/lottie.min.js"
     referrerpolicy="no-referrer">
@@ -14,11 +13,9 @@
 </head>
 
 <body>
-  <!-- Контейнери з фіксованими розмірами для анімації -->
   <div id="lottie-container"></div>
   <div id="lottie-container-bottom"></div>
 
-  <!-- Меню профілю у правому верхньому куті -->
   <header id="top-bar">
     <div id="profile-menu" class="profile-menu">
       <span id="profile-username">{{ user }}</span>
@@ -45,7 +42,6 @@
     </div>
   </header>
 
-  <!-- Список улюблених -->
   <section id="favorites-section">
     <h2>Your Favorites</h2>
     <ul id="favorites-list">
@@ -57,27 +53,26 @@
           data-duration="{{ song.duration }}"
       >
         <span class="song-title">{{ song.title }}</span>
-        <button class="heart-btn">♥</button>
+        <button class="trash-btn">🗑️</button>
         <button class="play-btn">Play</button>
       </li>
       {% endfor %}
     </ul>
   </section>
 
-  <!-- Пошук -->
   <div id="search-container">
-    <input type="text" id="search" placeholder="Enter song or artist" autocomplete="off">
+    <div class="search-input-wrapper">
+      <input type="text" id="search" placeholder="Enter song or artist" autocomplete="off">
+      <ul id="autocomplete-suggestions"></ul>
+    </div>
     <button class="search-button">Search</button>
-    <ul id="autocomplete-suggestions"></ul>
   </div>
 
-  <!-- Результати пошуку -->
   <div id="search-results">
     <div id="results-grid" class="results-grid"></div>
     <div id="loading" style="display:none;">Loading...</div>
   </div>
 
-  <!-- Програвач -->
   <section id="playback-status">
     <h2><span id="current-song-title">N/A</span></h2>
 
@@ -92,7 +87,6 @@
     <div id="playback-progress-container">
       <button id="current-heart-btn">♡</button>
 
-      <!-- Початкові значення 0:00 -->
       <span id="prog-start">0:00</span>
       <input type="range" id="playback-progress" min="0" value="0" step="0.1">
       <span id="prog-end">0:00</span>
@@ -113,7 +107,6 @@
     </div>
   </section>
 
-  <!-- Socket.IO + JS -->
   <script src="https://cdn.socket.io/4.5.4/socket.io.min.js" crossorigin="anonymous"></script>
   <script type="module" src="/static/js/main.js"></script>
 </body>

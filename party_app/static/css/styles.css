@@ -6,13 +6,19 @@
   margin: 0;
   padding: 0;
 }
-html, body {
+html,
+body {
   width: 100%;
   height: 100%;
   font-family: Arial, sans-serif;
 }
 body {
   background-color: #0d1224;
+  background-image: url("/static/img/background.svg");
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-attachment: fixed;
+  background-size: cover;
   color: #e0e0e0;
   line-height: 1.5;
   margin: 0 auto;
@@ -33,7 +39,8 @@ body {
 }
 
 /* Headings, buttons */
-h1, h2 {
+h1,
+h2 {
   text-align: center;
 }
 button {
@@ -43,7 +50,8 @@ button {
   border: none;
   padding: 0.5rem 1rem;
   border-radius: var(--border-radius);
-  transition: background var(--transition-speed), transform var(--transition-speed);
+  transition: background var(--transition-speed),
+    transform var(--transition-speed);
 }
 button:hover {
   background: var(--color-secondary);
@@ -109,7 +117,8 @@ button:hover {
   background: var(--color-primary);
   padding: 0.4rem 0.8rem;
   border-radius: var(--border-radius);
-  transition: background var(--transition-speed), transform var(--transition-speed);
+  transition: background var(--transition-speed),
+    transform var(--transition-speed);
 }
 .profile-dropdown #logout-btn:hover {
   background: var(--color-secondary);
@@ -174,43 +183,55 @@ button:hover {
 }
 
 /* Search */
+/* Search */
 #search-container {
   margin: 1rem 0;
   text-align: center;
-  position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 0.5rem;
 }
-#search {
+
+.search-input-wrapper {
+  position: relative;
+  display: inline-block;
   width: 30%;
   max-width: 400px;
+}
+
+#search {
+  width: 100%;
   padding: 0.5rem;
   border-radius: var(--border-radius);
   border: 1px solid #333;
   background: #111;
   color: #fff;
 }
+
 #autocomplete-suggestions {
   position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 200px;
+  top: 100%;
+  left: 0;
+  width: 100%;
   background: #111;
   border-radius: var(--border-radius);
   list-style: none;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
   display: none;
   z-index: 9997;
+  margin-top: 5px; /* Виправлено */
 }
+
 .suggestion-item {
   padding: 0.5rem;
   cursor: pointer;
 }
+
 .suggestion-item:hover {
   background: var(--color-bg-hover);
 }
+
 #autocomplete-suggestions.show {
   display: block;
 }
@@ -299,7 +320,8 @@ button:hover {
   position: relative;
   margin-top: 0.5rem;
 }
-#prog-start, #prog-end {
+#prog-start,
+#prog-end {
   width: 40px;
   margin: 0 5px;
   text-align: center;
@@ -352,7 +374,7 @@ button:hover {
   flex-direction: column;
   align-items: center;
   z-index: 9999;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.8);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.8);
 }
 .volume-slider-container.show {
   display: flex;
@@ -396,18 +418,6 @@ button:hover {
   width: 100%;
 }
 
-/* Media queries */
-@media (max-width: 600px) {
-  #lottie-container {
-    width: 60%;
-    max-width: 250px;
-  }
-  #lottie-container-bottom {
-    width: 60%;
-    max-width: 150px;
-  }
-}
-
 /* Spinner */
 .loading-spinner {
   position: relative;
@@ -423,4 +433,112 @@ button:hover {
   background-size: contain;
   cursor: default;
   transform: none;
+}
+
+/* Welcome Page Container */
+.welcome-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100vh; /* Висота сторінки дорівнює висоті екрана */
+  overflow: hidden; /* Забороняє прокрутку */
+}
+
+/* Welcome Content Container */
+.welcome-content {
+  display: flex;
+  justify-content: space-between; /* Логотип ліворуч, текст праворуч */
+  align-items: center;
+  width: 100%; /* Займає всю ширину екрана */
+  padding: 0 2rem; /* Відступи зліва і справа */
+}
+
+/* Logo Section */
+.welcome-logo-container {
+  flex: 1; /* Логотип займає одну частину контейнера */
+  display: flex;
+  justify-content: flex-start; /* Вирівнювання логотипа по лівому краю */
+  align-items: center;
+}
+
+.welcome-logo {
+  max-width: 100%; /* Логотип адаптивно масштабується */
+  max-height: 100%; /* Висота логотипа в межах секції */
+  object-fit: contain; /* Логотип зберігає пропорції */
+  border-radius: 2rem;
+}
+
+/* Main Section */
+.welcome-main {
+  flex: 1; /* Текст займає одну частину контейнера */
+  display: flex;
+  flex-direction: column; /* Вирівнювання тексту та кнопки вертикально */
+  justify-content: center; /* Центрування по вертикалі */
+  align-items: center; /* Вирівнювання тексту та кнопки по правому краю */
+  padding-left: 1rem;
+}
+
+.welcome-title {
+  font-size: 2.5rem;
+  color: #fff;
+  margin-bottom: 1rem;
+}
+
+.highlight {
+  color: var(--color-primary, #8228ec);
+  font-weight: bold;
+  font-style: italic;
+}
+
+.welcome-text {
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+  color: #e0e0e0;
+}
+
+.welcome-btn {
+  padding: 0.8rem 2rem;
+  font-size: 1rem;
+  color: #fff;
+  background: var(--color-primary, #8228ec);
+  border-radius: var(--border-radius, 8px);
+  text-decoration: none;
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.welcome-btn:hover {
+  background: var(--color-secondary, #f626af);
+  transform: scale(1.05);
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+  .welcome-content {
+    flex-direction: column; /* На мобільних екранах логотип і текст розташовані вертикально */
+    align-items: center;
+    text-align: center;
+  }
+
+  .welcome-logo-container {
+    justify-content: center; /* Логотип центрується */
+    margin-bottom: 1.5rem;
+  }
+
+  .welcome-main {
+    align-items: center; /* Текст вирівняний по центру */
+  }
+}
+
+
+/* Media queries */
+@media (max-width: 600px) {
+  #lottie-container {
+    width: 60%;
+    max-width: 250px;
+  }
+  #lottie-container-bottom {
+    width: 60%;
+    max-width: 150px;
+  }
 }

@@ -42,7 +42,9 @@ export function hideLoadingState() {
 
 export function updatePlaybackUI(data) {
   console.log("updatePlaybackUI called with data:", data);
+  
   if (!data || !data.current_song) return;
+  
   const incomingSong = data.current_song;
   const currentLocalId = getCurrentVideoId();
   const { video_id, title, state, position, duration } = incomingSong;
@@ -61,7 +63,6 @@ export function updatePlaybackUI(data) {
     console.log(`[updatePlaybackUI] serverPos ${finalPos} > localPos ${localPos}, use serverPos`);
   }
 
-  // Скидання позиції в 0 при зміні пісні
   if (video_id !== currentLocalId) {
     setCurrentVideoId(video_id);
     setCurrentPosition(0);
@@ -92,8 +93,9 @@ export function updatePlaybackUI(data) {
 
 export function updateCurrentPlaybackUI(songData, state, pos) {
   const titleEl = document.getElementById("current-song-title");
+  
   if (!songData && state === "pause") {
-    // Якщо немає даних про трек і він на паузі — залишаємо попереднє відображення
+    // Leave the previous
   } else if (!songData) {
     if (titleEl) titleEl.textContent = "N/A";
   } else {
@@ -107,22 +109,27 @@ export function updateCurrentPlaybackUI(songData, state, pos) {
       checkIfFavorite(songData.video_id);
     }
   }
+
   setCurrentPlayingState(state);
   setCurrentPosition(pos || 0);
+
   const slider = document.getElementById("playback-progress");
   if (slider) {
     slider.max = getCurrentDuration();
     slider.value = getCurrentPosition();
   }
+
   const progStart = document.getElementById("prog-start");
   if (progStart) {
     progStart.textContent = secondsToHMS(getCurrentPosition());
   }
+
   const progEnd = document.getElementById("prog-end");
   if (progEnd) {
     progEnd.textContent = secondsToHMS(getCurrentDuration());
   }
-  const playPauseBtn = document.getElementById("btn-play-pause");
+
+  const playPauseBtn = getPlayPauseBtn();
   if (playPauseBtn) {
     playPauseBtn.textContent = (state === "playing") ? "⏸" : "▶";
   }

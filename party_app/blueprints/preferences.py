@@ -1,5 +1,3 @@
-# файл: blueprints/preferences.py
-
 from flask import Blueprint, request, jsonify, current_app
 from decorators.token_required import token_required
 import logging
@@ -18,11 +16,8 @@ def update_preferences(current_user):
         google_id = current_user["google_id"]
         user_service = current_app.user_service
         pubnub_client = current_app.pubnub_client
-
-        # Тягнемо поточні налаштування з бази
         existing_prefs = user_service.get_preferences(google_id) or {}
 
-        # Оновлюємо лише ті поля, що прийшли з клієнта
         if "volume" in data:
             existing_prefs["volume"] = data["volume"]
         if "led_mode" in data:
@@ -30,10 +25,8 @@ def update_preferences(current_user):
         if "motion_detection" in data:
             existing_prefs["motion_detection"] = data["motion_detection"]
 
-        # Зберігаємо у Mongo
         user_service.save_preferences(google_id, existing_prefs)
 
-        # Надсилаємо повідомлення на канал команд
         pubnub_client.publish_message(
             current_user["channel_name_commands"],
             {

@@ -90,7 +90,6 @@ def get_direct_stream_url(video_id: str) -> str:
         logger.error(f"Error in get_direct_stream_url({video_id}): {e}")
         return ""    
 
-# Решта функцій без змін:
 def search_youtube_music(query, max_results=20, page_token=None):
     url = f"{BASE_URL}/search"
     params = {
@@ -154,7 +153,6 @@ def control_music(action):
     return True
 
 def fetch_video_title(video_id):
-    # Старий метод, можна залишити
     url = f"{BASE_URL}/videos"
     params = {"part": "snippet", "id": video_id, "key": YOUTUBE_API_KEY}
     try:

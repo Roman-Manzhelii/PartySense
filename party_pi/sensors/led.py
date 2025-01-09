@@ -1,4 +1,3 @@
-# sensors/led.py
 import time
 from rpi_ws281x import PixelStrip, Color
 
@@ -33,7 +32,6 @@ class LEDRing:
         self.turn_off()
 
     def show_party_mode(self):
-        # Простий ефект блимання
         for _ in range(3):
             self.set_color(255, 0, 0)
             time.sleep(0.3)

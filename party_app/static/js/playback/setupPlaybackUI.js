@@ -48,7 +48,6 @@ export function setupPlaybackUI() {
     sendControlAction("set_mode", { mode: "repeat" });
   });
 
-  // Seek bar
   const progressSlider = document.getElementById("playback-progress");
   if (progressSlider) {
     progressSlider.addEventListener("input", (e) => {

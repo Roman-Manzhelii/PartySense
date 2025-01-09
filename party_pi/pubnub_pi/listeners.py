@@ -1,5 +1,3 @@
-# pubnub_pi/listeners.py
-
 from pubnub.callbacks import SubscribeCallback
 from pubnub.models.consumer.pubsub import PNMessageResult
 
@@ -21,31 +19,31 @@ class CommandListener(SubscribeCallback):
         if action == "play_direct":
             duration = msg.get("duration", 0)
             position = msg.get("position", 0)
-            # The direct audio/video stream URL:
             stream_url = msg.get("stream_url", "")
-            volume = msg.get("volume", 50)  # or handle from preferences
+            volume = msg.get("volume", 50)
 
-            # Start playback with direct URL
-            self.youtube_player.play_url(
-                url=stream_url,
-                position=position,
-                volume=volume
-            )
-
-            # Update our local "virtual" Player
-            self.player.load_track(duration, video_id="(direct)")  # or keep the real video_id somewhere
-            self.player.seek(position)
-            self.player.play()
-
-            print(f"[CommandListener] Playing direct stream {stream_url} at position={position}, volume={volume}")
+            if self.youtube_player.current_stream_url == stream_url:
+                self.youtube_player.seek(position)
+                self.player.seek(position)
+                self.youtube_player._player.play()
+                print(f"[CommandListener] Resumed stream at position {position}")
+            else:
+                self.youtube_player.play_url(
+                    url=stream_url,
+                    position=position,
+                    volume=volume
+                )
+                self.player.load_track(duration, video_id="(direct)")
+                self.player.seek(position)
+                self.player.play()
+                print(f"[CommandListener] Playing direct stream {stream_url} at position={position}, volume={volume}")
             return
 
         elif action == "pause":
             position = msg.get("position", None)
             if position is not None:
                 self.player.seek(position)
-                self.youtube_player.seek(position)  # реальне переміщення в плеєрі
-
+                self.youtube_player.seek(position)
             self.player.pause()
             self.youtube_player.pause()
             print(f"[CommandListener] Paused at position {position}")
@@ -60,6 +58,18 @@ class CommandListener(SubscribeCallback):
             new_volume = msg.get("volume", 50)
             self.youtube_player.set_volume(new_volume)
             print(f"[CommandListener] Volume set to {new_volume}")
+
+        elif action == "update_preferences":
+            preferences = msg.get("preferences", {})
+            volume = preferences.get("volume")
+            if volume is not None:
+                if volume == 0:
+                    self.youtube_player._player.audio_set_mute(True)
+                else:
+                    self.youtube_player._player.audio_set_mute(False)
+                    self.youtube_player.set_volume(volume * 100)
+                print(f"[CommandListener] Volume updated to {volume}")
+            print(f"[CommandListener] Updated preferences: {preferences}")
 
         elif action == "stop":
             self.player.stop()

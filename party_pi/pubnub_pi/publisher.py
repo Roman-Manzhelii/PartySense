@@ -1,4 +1,3 @@
-# pubnub_pi/publisher.py
 from pubnub.pubnub import PubNub
 from pubnub.exceptions import PubNubException
 from pubnub_pi.pubnub_config import get_pubnub_config

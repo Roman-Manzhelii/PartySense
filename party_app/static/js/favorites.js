@@ -64,10 +64,10 @@ export function refreshFavoritesList() {
         spanTitle.className = "song-title";
         spanTitle.textContent = song.title;
 
-        const heartBtn = document.createElement("button");
-        heartBtn.className = "heart-btn";
-        heartBtn.textContent = "♥";
-        heartBtn.addEventListener("click", () => toggleFavorite(song.video_id));
+        const trashBtn = document.createElement("button");
+        trashBtn.className = "trash-btn";
+        trashBtn.textContent = "🗑️";
+        trashBtn.addEventListener("click", () => removeFavorite(song.video_id));
 
         const playBtn = document.createElement("button");
         playBtn.className = "play-btn";
@@ -82,7 +82,7 @@ export function refreshFavoritesList() {
         });
 
         li.appendChild(spanTitle);
-        li.appendChild(heartBtn);
+        li.appendChild(trashBtn);
         li.appendChild(playBtn);
         favList.appendChild(li);
       });

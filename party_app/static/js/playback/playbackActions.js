@@ -82,7 +82,33 @@ export function sendSeekCommand(newPos) {
   });
 }
 
+export function sendResumeAsPlay() {
+  const videoId = getCurrentVideoId();
+  const pos = getCurrentPosition();
+  const nowTs = Date.now();
+
+  showLoadingState();
+  fetch(API.PLAYBACK, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: "play",
+      video_id: videoId,
+      position: pos,
+      timestamp: nowTs
+    })
+  }).then(() => {
+    hideLoadingState();
+    fetchCurrentPlayback();
+  });
+}
+
 export function playSongFromSearch(songData) {
+  if (getCurrentVideoId() === songData.video_id && getCurrentPlayingState() === "pause") {
+    sendResumeAsPlay();
+    return;
+  }
+  
   pauseIfPlaying().then(() => {
     showLoadingState();
     setCurrentPlayingState("playing");
@@ -111,6 +137,11 @@ export function playSongFromSearch(songData) {
 }
 
 export function playSongFromFavorites(songData) {
+  if (getCurrentVideoId() === songData.video_id && getCurrentPlayingState() === "pause") {
+    sendResumeAsPlay();
+    return;
+  }
+
   pauseIfPlaying().then(() => {
     showLoadingState();
     setCurrentPlayingState("playing");
@@ -139,29 +170,37 @@ export function playSongFromFavorites(songData) {
 }
 
 export function playSongFromCurrent(startPos = 0) {
+  const videoId = getCurrentVideoId();
+  if (!videoId) {
+    hideLoadingState();
+    return;
+  }
+
+  const currentSong = {
+    video_id: videoId,
+    title: document.getElementById("current-song-title")?.textContent || "Unknown",
+    thumbnail_url: "",
+    duration: getCurrentDuration()
+  };
+
+  if (getCurrentPlayingState() === "pause") {
+    sendResumeAsPlay();
+    return;
+  }
+
   pauseIfPlaying().then(() => {
     showLoadingState();
-    const videoId = getCurrentVideoId();
-    if (!videoId) {
-      hideLoadingState();
-      return;
-    }
     setCurrentPlayingState("playing");
     setCurrentPosition(startPos);
-    updateCurrentPlaybackUI({
-      video_id: videoId,
-      title: document.getElementById("current-song-title")?.textContent || "Unknown",
-      thumbnail_url: "",
-      duration: getCurrentDuration()
-    }, "playing", startPos);
+    updateCurrentPlaybackUI(currentSong, "playing", startPos);
     fetch(API.PLAYBACK, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         action: "play",
         video_id: videoId,
-        title: document.getElementById("current-song-title")?.textContent || "",
-        thumbnail_url: "",
+        title: currentSong.title,
+        thumbnail_url: currentSong.thumbnail_url,
         position: startPos,
         mode: "default",
         timestamp: Date.now()

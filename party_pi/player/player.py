@@ -1,5 +1,3 @@
-# player/player.py
-
 import threading
 import time
 

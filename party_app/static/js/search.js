@@ -1,4 +1,3 @@
-// search.js
 import { API } from './api.js';
 import { debounce } from './helpers.js';
 import { playSongFromSearch } from './playback/playbackActions.js';
@@ -65,6 +64,12 @@ export function setupSearch() {
   });
 }
 
+function decodeHTMLEntities(text) {
+  const txt = document.createElement("textarea");
+  txt.innerHTML = text;
+  return txt.value;
+}
+
 function updateSuggestionsUI(suggestions, searchInput, suggestionsList) {
   if (!suggestionsList) return;
   if (!suggestions || suggestions.length === 0) {
@@ -76,14 +81,15 @@ function updateSuggestionsUI(suggestions, searchInput, suggestionsList) {
   suggestionsList.classList.add("show");
 
   suggestions.forEach(({ title }) => {
+    const decodedTitle = decodeHTMLEntities(title);
     const li = document.createElement("li");
     li.className = "suggestion-item";
-    li.textContent = title;
+    li.textContent = decodedTitle;
     li.addEventListener("click", () => {
-      searchInput.value = title;
+      searchInput.value = decodedTitle;
       suggestionsList.innerHTML = "";
       suggestionsList.classList.remove("show");
-      initiateSearch(title);
+      initiateSearch(decodedTitle);
     });
     suggestionsList.appendChild(li);
   });
@@ -144,7 +150,7 @@ function renderSearchResults(data) {
     img.alt = snippet.title;
 
     const titleElem = document.createElement("h4");
-    titleElem.textContent = snippet.title;
+    titleElem.textContent = decodeHTMLEntities(snippet.title);
 
     card.addEventListener("click", () => {
       playSongFromSearch({

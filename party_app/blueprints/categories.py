@@ -1,4 +1,3 @@
-# blueprints/categories.py
 from flask import Blueprint, jsonify, request, current_app
 from services.user_service import UserService
 from decorators.token_required import token_required
@@ -9,7 +8,6 @@ import logging
 categories_bp = Blueprint('categories', __name__)
 logger = logging.getLogger(__name__)
 
-# Схеми валідації
 class CategoryCreateSchema(Schema):
     name = fields.String(required=True)
     description = fields.String(required=False, default="")

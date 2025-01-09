@@ -1,4 +1,3 @@
-# blueprints/playlists.py
 from flask import Blueprint, jsonify, request, current_app
 from services.user_service import UserService
 from decorators.token_required import token_required
@@ -8,8 +7,6 @@ import logging
 
 playlists_bp = Blueprint('playlists', __name__)
 logger = logging.getLogger(__name__)
-
-# Схеми валідації
 class PlaylistCreateSchema(Schema):
     name = fields.String(required=True)
     description = fields.String(required=False, default="")
@@ -53,7 +50,6 @@ def update_existing_playlist(current_user, playlist_id):
     user_id = str(current_user["_id"])
     user_service: UserService = current_app.user_service
 
-    # Перевірка, чи належить плейлист користувачу
     playlist = user_service.get_playlists(user_id).filter({"_id": ObjectId(playlist_id)}).first()
     if not playlist:
         return jsonify({"error": "Playlist not found."}), 404

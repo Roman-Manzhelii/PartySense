@@ -1,5 +1,3 @@
-# main.py
-
 import time
 
 from pubnub.pubnub import PubNub
@@ -11,28 +9,18 @@ from player.player import Player
 
 
 def main():
-    # Ініціалізація PubNub
     pnconfig = get_pubnub_config()
     pubnub = PubNub(pnconfig)
-
-    # Створюємо інстанси Player та YouTubePlayer
     player = Player()
     youtube_player = YouTubePlayer()
 
     led_ring = None
-
-    # Створюємо CommandListener
     command_listener = CommandListener(player, youtube_player, led_ring)
 
-    # Додаємо listener до PubNub
     pubnub.add_listener(command_listener)
-
-    # Підписуємося на канал команд (змініть назву на ваш)
     command_channel = "user_114379767835747196870_commands"
     print(f"[main] Subscribing to '{command_channel}'...")
     pubnub.subscribe().channels(command_channel).execute()
-
-    # Запускаємо фоновий цикл Player (для імітації збільшення position)
     player.start_background()
 
     try:
@@ -42,11 +30,8 @@ def main():
     except KeyboardInterrupt:
         print("[main] Exiting...")
     finally:
-        # Зупиняємо фоновий цикл
         player.stop_background()
-        # Відписуємося від каналу
         pubnub.unsubscribe().channels(command_channel).execute()
-        # Зупиняємо YouTubePlayer
         youtube_player.stop()
         print("[main] Shutdown complete.")
 

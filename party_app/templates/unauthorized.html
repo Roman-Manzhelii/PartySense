@@ -1,14 +1,24 @@
-<!-- templates/unauthorized.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>No Access</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome!</title>
     <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
-    <h1>No Access</h1>
-    <p>You do not have permission to view this page.</p>
-    <a href="/login">Login</a>
+    <div class="welcome-page">
+        <div class="welcome-content">
+            <div class="welcome-logo-container">
+                <img src="/static/img/logo.png" alt="PartySense Logo" class="welcome-logo">
+            </div>
+
+            <div class="welcome-main">
+                <h1 class="welcome-title">Welcome to <span class="highlight">PartySense</span></h1>
+                <p class="welcome-text">Your ultimate music and party assistant!</p>
+                <a href="/login" class="welcome-btn">Login</a>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

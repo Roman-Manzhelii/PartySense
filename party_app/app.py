@@ -1,4 +1,3 @@
-# app.py
 from flask import Flask, session, render_template, request, redirect
 from flask_socketio import SocketIO
 import os
@@ -27,12 +26,9 @@ app.config.update(
 
 socketio = SocketIO(app)
 
-# Кеш для зберігання останнього стану відтворення кожного користувача
 last_playback_states = {}
-# Кеш для зберігання часу останнього оновлення
 last_update_times = {}
 
-# Function to handle status updates
 def handle_status_update(message):
     try:
         user_id = message.get("user_id")
@@ -46,7 +42,6 @@ def handle_status_update(message):
         last_state = last_playback_states.get(user_id)
         last_update = last_update_times.get(user_id, now - timedelta(seconds=10))
 
-        # [ADDED] check DB to avoid overwriting a bigger position
         existing_db = app.user_service.get_current_playback(user_id)
         if existing_db and "current_song" in existing_db:
             db_song = existing_db["current_song"]
@@ -54,31 +49,25 @@ def handle_status_update(message):
             msg_pos = current_song.get("position", 0)
             if msg_pos < db_pos:
                 logger.info(f"[handle_status_update] ignoring older position msg_pos={msg_pos} < db_pos={db_pos}")
-                return  # do nothing
+                return
 
-        # Перевірка змін стану
         if last_state != current_song:
             state_changed = False
             if last_state is None:
                 state_changed = True
             else:
-                # Порівнюємо окремі поля
                 for key in ["video_id", "title", "state", "position", "mode", "motion_detected"]:
                     if last_state.get(key) != current_song.get(key):
                         state_changed = True
                         break
 
-            # Перевірка часу останнього оновлення
             if state_changed and (now - last_update) >= timedelta(seconds=1):
-                # Оновлюємо кеш
                 last_playback_states[user_id] = current_song
                 last_update_times[user_id] = now
 
-                # Оновлюємо поточне відтворення у базі даних
                 app.user_service.update_current_playback(str(user_id), current_song)
                 logger.info(f"Updated current_playback for user {user_id}.")
 
-                # Емітуємо оновлення через Socket.IO
                 socketio.emit('playback_update', {'user_id': user_id, 'current_song': current_song})
                 logger.info(f"Emitted playback_update for user {user_id}.")
             else:
@@ -88,21 +77,17 @@ def handle_status_update(message):
     except Exception as e:
         logger.error(f"Error handling status update: {e}")
 
-# Ініціалізація PubNubClient з колбеком
 pubnub_client = PubNubClient(handle_status_update)
 app.pubnub_client = pubnub_client
 
-# Ініціалізація UserService з PubNubClient
 user_service = UserService(pubnub_client)
 app.user_service = user_service
 
-# Ініціалізація інших сервісів
 music_service = MusicService()
 app.music_service = music_service
 
 search_service = SearchService()
 
-# Імпортуємо Blueprint'и
 from blueprints.auth import auth_bp
 from blueprints.music import music_bp
 from blueprints.search import search_bp
@@ -163,7 +148,7 @@ def dashboard(current_user):
 @app.route("/logout")
 def logout():
     session.clear()
-    return redirect("/login")
+    return redirect("/")
 
 @app.route("/unauthorized")
 def unauthorized():

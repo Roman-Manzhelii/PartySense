@@ -24,7 +24,6 @@ def token_required(f):
 
             pubnub_client = current_app.pubnub_client
 
-            # Перевірка токенів commands
             token_commands = user_doc.get("channel_token_commands")
             expiration_commands = user_doc.get("channel_token_commands_expiration")
             if token_commands and expiration_commands:
@@ -42,7 +41,6 @@ def token_required(f):
                         logger.error("Failed to update channel_token_commands.")
                         return jsonify({'error': 'Failed to update token'}), 500
 
-            # Перевірка токенів status
             token_status = user_doc.get('channel_token_status')
             expiration_status = user_doc.get('channel_token_status_expiration')
             if token_status and expiration_status:

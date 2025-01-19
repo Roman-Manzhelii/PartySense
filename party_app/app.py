@@ -172,4 +172,4 @@ if __name__ == "__main__":
         pubnub_client.subscribe_to_channels(user_ids)
         logger.info("Subscribed to all existing users' status channels.")
 
-    socketio.run(app, host="localhost", port=5000)
+    socketio.run(app, host="0.0.0.0", port=5000)

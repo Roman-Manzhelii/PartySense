@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 @auth_bp.route("/login")
 def login():
-    flow = auth_service.create_flow("http://localhost:5000/login/authorized")
+    flow = auth_service.create_flow("http://127.0.0.1:5000/login/authorized")
     authorization_url, state = flow.authorization_url(prompt="consent")
     session["state"] = state
     logger.info("Redirecting to Google authorization URL.")
@@ -30,7 +30,7 @@ def authorized():
             logger.warning("State mismatch.")
             return redirect("/unauthorized")
 
-        flow = auth_service.create_flow("http://localhost:5000/login/authorized")
+        flow = auth_service.create_flow("http://127.0.0.1:5000/login/authorized")
         flow.fetch_token(authorization_response=request.url)
         credentials = flow.credentials
 

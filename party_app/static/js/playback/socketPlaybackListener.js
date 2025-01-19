@@ -20,5 +20,5 @@ export function setupPlaybackUpdateListener(socket) {
       return;
     }
     fetchCurrentPlayback();
-  }, 5000);
+  }, 20000);
 }

@@ -8,7 +8,7 @@ google-auth==2.36.0
 google-auth-oauthlib==1.2.1
 Jinja2==3.1.5
 oauthlib==3.2.2
-requests==2.32.3
+requests==2.32.4
 requests-oauthlib==2.0.0
 yt-dlp==2024.12.23
 marshmallow==3.23.2
